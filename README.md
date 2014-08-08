@@ -1,4 +1,5 @@
 contact
-=======
+==============
 
-Stochastic processes on a contact graph
+Stochastic processes on a contact graph.
+
