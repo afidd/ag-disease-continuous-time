@@ -7,7 +7,7 @@
 #include <map>
 #include <array>
 #include "boost/program_options.hpp"
-#include "sir_exp.hpp"
+#include "disease.hpp"
 
 class HDFFile {
  public:

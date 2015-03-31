@@ -2,7 +2,7 @@
 #include <sstream>
 #include "boost/program_options.hpp"
 #include "smv.hpp"
-#include "sir_exp.hpp"
+#include "disease.hpp"
 #include "hdf_file.hpp"
 #include "ensemble.hpp"
 #include "contact_version.hpp"

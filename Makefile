@@ -26,18 +26,18 @@ LIBS=-L$(BOOST)/lib -L$(HDF5)/lib  \
 	-lpthread
 
 
-contact: sir_exp.o main.o hdf_file.o
-	g++ $(OPT) -fPIC -o sirexp sir_exp.o main.o hdf_file.o $(LIBS)
+contact: disease.o main.o hdf_file.o
+	g++ $(OPT) -fPIC -o sirexp disease.o main.o hdf_file.o $(LIBS)
 
-sir_exp.o: sir_exp.cpp sir_exp.hpp
-	g++ sir_exp.cpp -DHAVE_CONFIG_H -std=c++11 -fPIC $(INCLUDES) $(OPT) \
-	-c -o sir_exp.o
+disease.o: disease.cpp disease.hpp
+	g++ disease.cpp -DHAVE_CONFIG_H -std=c++11 -fPIC $(INCLUDES) $(OPT) \
+	-c -o disease.o
 
-hdf_file.o: hdf_file.cpp hdf_file.hpp sir_exp.hpp
+hdf_file.o: hdf_file.cpp hdf_file.hpp disease.hpp
 	g++ hdf_file.cpp -DHAVE_CONFIG_H -std=c++11 -fPIC $(INCLUDES) $(OPT) \
 	-c -o hdf_file.o
 
-main.o: main.cpp contact_version.hpp sir_exp.hpp
+main.o: main.cpp contact_version.hpp disease.hpp
 	g++ main.cpp -DHAVE_CONFIG_H -std=c++11 -fPIC $(INCLUDES) $(OPT) \
 	-c -o main.o
 

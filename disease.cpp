@@ -16,7 +16,7 @@
 #include "boost/mpl/vector.hpp"
 #include "boost/program_options.hpp"
 #include "smv.hpp"
-#include "sir_exp.hpp"
+#include "disease.hpp"
 
 namespace smv=afidd::smv;
 using namespace smv;
