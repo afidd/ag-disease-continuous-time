@@ -3,10 +3,10 @@
 #include <map>
 #include <random>
 #include "boost/random/mersenne_twister.hpp"
-#include "mt19937.hpp"
+//#include "mt19937.hpp"
 
-using RandGen=afidd::rng::mt19937;
-//using RandGen=boost::mt19937;
+//using RandGen=afidd::rng::mt19937;
+using RandGen=boost::mt19937;
 
 enum class SIRParam { Beta0, Beta1, Gamma, Birth, Mu, SeasonalPhase };
 struct Parameter {

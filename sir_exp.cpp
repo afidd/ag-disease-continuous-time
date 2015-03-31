@@ -102,7 +102,7 @@ class Infect : public SIRTransition
 {
   virtual std::pair<bool, std::unique_ptr<Dist>>
   Enabled(const UserState& s, const Local& lm,
-    double te, double t0) const override {
+    double te, double t0, RandGen& rng) override {
     // If these are just size_t, then the rate calculation overflows.
     int64_t S=lm.template Length<0>(0);
     int64_t I=lm.template Length<0>(1);
@@ -125,7 +125,7 @@ class Infect : public SIRTransition
   }
 
   virtual void Fire(UserState& s, Local& lm, double t0,
-      RandGen& rng) const override {
+      RandGen& rng) override {
     SMVLOG(BOOST_LOG_TRIVIAL(trace) << "Fire infection " << lm);
     // s0 i1 r2 i3 r4
     lm.template Move<0,0>(0, 3, 1);
@@ -141,7 +141,7 @@ class Recover : public SIRTransition
 {
   virtual std::pair<bool, std::unique_ptr<Dist>>
   Enabled(const UserState& s, const Local& lm,
-    double te, double t0) const override {
+    double te, double t0, RandGen& rng) override {
     int64_t I=lm.template Length<0>(0);
     if (I>0) {
       double rate=I*s.params.at(SIRParam::Gamma);
@@ -155,7 +155,7 @@ class Recover : public SIRTransition
   }
 
   virtual void Fire(UserState& s, Local& lm, double t0,
-      RandGen& rng) const override {
+      RandGen& rng) override {
     SMVLOG(BOOST_LOG_TRIVIAL(trace) << "Fire infection " << lm);
     lm.template Move<0, 0>(0, 1, 1);
   }
@@ -168,7 +168,7 @@ class Birth : public SIRTransition
 {
   virtual std::pair<bool, std::unique_ptr<Dist>>
   Enabled(const UserState& s, const Local& lm,
-    double te, double t0) const override {
+    double te, double t0, RandGen& rng) override {
     if (s.params.at(SIRParam::Birth)>0) {
       return {true, std::unique_ptr<ExpDist>(
         new ExpDist(s.params.at(SIRParam::Birth), te))};
@@ -178,7 +178,7 @@ class Birth : public SIRTransition
   }
 
   virtual void Fire(UserState& s, Local& lm, double t0,
-      RandGen& rng) const override {
+      RandGen& rng) override {
     SMVLOG(BOOST_LOG_TRIVIAL(trace) << "Fire infection " << lm);
     lm.template Add<0>(1, IndividualToken{});
   }
@@ -191,7 +191,7 @@ class Death : public SIRTransition
 {
   virtual std::pair<bool, std::unique_ptr<Dist>>
   Enabled(const UserState& s, const Local& lm,
-    double te, double t0) const override {
+    double te, double t0, RandGen& rng) override {
     int64_t SIR=lm.template Length<0>(0);
     if (SIR>0 && s.params.at(SIRParam::Mu)>0) {
       return {true, std::unique_ptr<ExpDist>(
@@ -202,7 +202,7 @@ class Death : public SIRTransition
   }
 
   virtual void Fire(UserState& s, Local& lm, double t0,
-      RandGen& rng) const override {
+      RandGen& rng) override {
     SMVLOG(BOOST_LOG_TRIVIAL(trace) << "Fire infection " << lm);
     lm.template Remove<0>(0, 1, rng);
   }
