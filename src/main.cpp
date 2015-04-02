@@ -155,8 +155,7 @@ int main(int argc, char *argv[]) {
   }
 
   std::map<std::string,std::string> compile_info {
-    {"VERSION", VERSION}, {"COMPILETIME", COMPILETIME},
-    {"CONFIG", CFG}
+    {"VERSION", VERSION}, {"COMPILETIME", COMPILETIME}
   };
   if (vm.count("info")) {
     for (auto& kv : compile_info) {

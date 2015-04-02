@@ -33,7 +33,7 @@ if __name__=='__main__':
     app=sys.argv[1]
     attrib=dict()
     attrib["VERSION"]=gitinfo()
-    attrib["CFG"]=makefile()
+    #attrib["CFG"]=makefile()
     attrib["COMPILETIME"]=when()
 
     f=open(app, "w")
