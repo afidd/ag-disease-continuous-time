@@ -10,13 +10,14 @@ BOOST=/home/ajd27/Documents/boost_1_57_0
 # If there is no suffix, use "BOOSTVARIANT=".
 BOOSTVARIANT=
 SEMIMARKOV=/usr/local/include/semimarkov-0.1
-HDF5=/usr/local/hdf5-1.8.11
+HDF5=/usr
+HDF5LIB=/usr/lib64
 
 CXX=g++
 # -DSMVHIDELOG -pg
-OPT=-g -O2 -DSMVHIDELOG
+OPT=-g -O2
 INCLUDES=-I$(SEMIMARKOV) -I. -I$(BOOST)/include -I$(HDF5)/include 
-LIBS=-L$(BOOST)/lib -L$(HDF5)/lib  \
+LIBS=-L$(BOOST)/lib -L$(HDF5LIB)  \
     -lboost_unit_test_framework$(BOOSTVARIANT) \
 	-lboost_log_setup$(BOOSTVARIANT) -lboost_log$(BOOSTVARIANT) \
 	-lboost_chrono$(BOOSTVARIANT) -lboost_thread$(BOOSTVARIANT) \
@@ -26,8 +27,8 @@ LIBS=-L$(BOOST)/lib -L$(HDF5)/lib  \
 	-lpthread
 
 
-contact: disease.o main.o hdf_file.o
-	g++ $(OPT) -fPIC -o sirexp disease.o main.o hdf_file.o $(LIBS)
+contact: disease.o main.o hdf_file.o scenario.o
+	g++ $(OPT) -fPIC -o contact disease.o scenario.o main.o hdf_file.o $(LIBS)
 
 disease.o: disease.cpp disease.hpp
 	g++ disease.cpp -DHAVE_CONFIG_H -std=c++11 -fPIC $(INCLUDES) $(OPT) \
@@ -36,6 +37,10 @@ disease.o: disease.cpp disease.hpp
 hdf_file.o: hdf_file.cpp hdf_file.hpp disease.hpp
 	g++ hdf_file.cpp -DHAVE_CONFIG_H -std=c++11 -fPIC $(INCLUDES) $(OPT) \
 	-c -o hdf_file.o
+
+scenario.o: scenario.hpp scenario.cpp
+	g++ scenario.cpp -DHAVE_CONFIG_H -std=c++11 -fPIC $(OPT) $(INCLUDES) \
+	-c -o scenario.o
 
 main.o: main.cpp contact_version.hpp disease.hpp
 	g++ main.cpp -DHAVE_CONFIG_H -std=c++11 -fPIC $(INCLUDES) $(OPT) \

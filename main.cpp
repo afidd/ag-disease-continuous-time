@@ -3,6 +3,7 @@
 #include "boost/program_options.hpp"
 #include "smv.hpp"
 #include "disease.hpp"
+#include "scenario.hpp"
 #include "hdf_file.hpp"
 #include "ensemble.hpp"
 #include "contact_version.hpp"
@@ -72,17 +73,17 @@ int main(int argc, char *argv[]) {
   size_t rand_seed=1;
   // Time is in years.
   std::vector<Parameter> parameters;
-  parameters.emplace_back(Parameter{SIRParam::Beta0, "beta0", 400,
+  parameters.emplace_back(Parameter{ADParam::Beta0, "beta0", 400,
     "main infection rate"});
-  parameters.emplace_back(Parameter{SIRParam::Beta1, "beta1", 0.6,
+  parameters.emplace_back(Parameter{ADParam::Beta1, "beta1", 0.6,
     "seasonality ratio"});
-  parameters.emplace_back(Parameter{SIRParam::SeasonalPhase, "phase", 0,
+  parameters.emplace_back(Parameter{ADParam::SeasonalPhase, "phase", 0,
     "seasonality phase start between (0,1]"});
-  parameters.emplace_back(Parameter{SIRParam::Gamma, "gamma", 365/14.0,
+  parameters.emplace_back(Parameter{ADParam::Gamma, "gamma", 365/14.0,
     "recovery rate"});
-  parameters.emplace_back(Parameter{SIRParam::Birth, "birth", 1/70.0,
+  parameters.emplace_back(Parameter{ADParam::Birth, "birth", 1/70.0,
     "crude rate, before multiplying by number of individuals"});
-  parameters.emplace_back(Parameter{SIRParam::Mu, "mu", 1/70.0,
+  parameters.emplace_back(Parameter{ADParam::Mu, "mu", 1/70.0,
     "death rate"});
   double end_time=30.0;
   bool exacttraj=true;
@@ -169,18 +170,18 @@ int main(int argc, char *argv[]) {
   if (test) {
   }
 
-  std::map<SIRParam,double*> params;
+  std::map<ADParam,double*> params;
   for (auto& pm : parameters) {
     params[pm.kind]=&pm.value;
   }
 
   // Birthrate is not frequency-dependent. It scales differently
   // which creates a fixed point in the phase plane.
-  (*params[SIRParam::Birth])*=individual_cnt;
+  (*params[ADParam::Birth])*=individual_cnt;
 
-  if (std::abs(*params[SIRParam::Beta1])>1) {
+  if (std::abs(*params[ADParam::Beta1])>1) {
     std::cout << "beta1 should be fractional, between 0 and 1: beta1=" <<
-      *params[SIRParam::Beta1] << std::endl;
+      *params[ADParam::Beta1] << std::endl;
     return -4;
   }
 
@@ -190,10 +191,10 @@ int main(int argc, char *argv[]) {
       << std::endl;
     return -3;
   } else if (!vm.count("infected") && !vm.count("recovered")) {
-    double b=*params[SIRParam::Beta0];
-    double m=*params[SIRParam::Mu];
-    double g=*params[SIRParam::Gamma];
-    double B=*params[SIRParam::Birth];
+    double b=*params[ADParam::Beta0];
+    double m=*params[ADParam::Mu];
+    double g=*params[ADParam::Gamma];
+    double B=*params[ADParam::Birth];
     // Long-time averages for fixed forcing for ODE model.
     int64_t susceptible_start=std::floor((m+g)*individual_cnt/b);
     infected_cnt=std::floor(individual_cnt*(b-m-g)*m/(b*(m+g)));
@@ -222,6 +223,7 @@ int main(int argc, char *argv[]) {
   file.WriteExecutableData(compile_info, parsed_options, sir_init);
 
   auto runnable=[=](RandGen& rng, size_t single_seed, size_t idx)->void {
+    Scenario scenario(individual_cnt);
     std::shared_ptr<TrajectoryObserver> observer=0;
     if (exacttraj) {
       observer=std::make_shared<TrajectorySave>();
@@ -229,7 +231,7 @@ int main(int argc, char *argv[]) {
       observer=std::make_shared<PercentTrajectorySave>();
     }
 
-    SIR_run(end_time, sir_init, parameters, *observer, rng, exactinfect);
+    SIR_run(end_time, parameters, scenario, observer, rng);
     file.SaveTrajectory(parameters, single_seed, idx, observer->Trajectory());
   };
 

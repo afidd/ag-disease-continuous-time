@@ -22,70 +22,89 @@ namespace smv=afidd::smv;
 using namespace smv;
 
 
-struct IndividualToken
+struct SimpleToken
 {
-  IndividualToken()=default;
+  SimpleToken()=default;
 
   inline friend
-  std::ostream& operator<<(std::ostream& os, const IndividualToken& it){
+  std::ostream& operator<<(std::ostream& os, const SimpleToken& it){
     return os << "T";
   }
 };
 
 
-struct SIRPlace
+struct HerdToken
 {
-  int disease;
-  SIRPlace()=default;
-  SIRPlace(int d) : disease(d) {}
-  friend inline
-  bool operator<(const SIRPlace& a, const SIRPlace& b) {
-    return LazyLess(a.disease, b.disease);
-  }
+  DiseaseState disease_state;
+  int64_t herd_size;
 
+  HerdToken()=default;
+  HerdToken(DiseaseState disease, int64_t cnt)
+    : disease_state(disease), herd_size(cnt) {}
 
-  friend inline
-  bool operator==(const SIRPlace& a, const SIRPlace& b) {
-    return a.disease==b.disease;
-  }
-
-
-  friend inline
-  std::ostream& operator<<(std::ostream& os, const SIRPlace& cp) {
-    return os << '(' << cp.disease << ')';
+  inline friend
+  std::ostream& operator<<(std::ostream& os, const HerdToken& it){
+    return os << "T";
   }
 };
 
 
-struct SIRTKey
+// Animal disease place
+struct ADPlace
 {
-  int kind;
-  SIRTKey()=default;
-  SIRTKey(int k) : kind(k) {}
+  int64_t location;
+  int64_t kind;
+  ADPlace()=default;
+  ADPlace(int64_t l, int64_t k) : location(l), kind(k) {}
+  friend inline
+  bool operator<(const ADPlace& a, const ADPlace& b) {
+    return LazyLess(a.location, b.location, a.kind, b.kind);
+  }
+
 
   friend inline
-  bool operator<(const SIRTKey& a, const SIRTKey& b) {
+  bool operator==(const ADPlace& a, const ADPlace& b) {
+    return (a.location==b.location) && (a.kind==b.kind);
+  }
+
+
+  friend inline
+  std::ostream& operator<<(std::ostream& os, const ADPlace& cp) {
+    return os << '(' << cp.location << ',' << cp.kind << ')';
+  }
+};
+
+
+struct ADKey
+{
+  int kind;
+  ADKey()=default;
+  ADKey(int k) : kind(k) {}
+
+  friend inline
+  bool operator<(const ADKey& a, const ADKey& b) {
     return LazyLess(a.kind, b.kind);
   }
 
   friend inline
-  bool operator==(const SIRTKey& a, const SIRTKey& b) {
+  bool operator==(const ADKey& a, const ADKey& b) {
     return a.kind==b.kind;
   }
 
   friend inline
-  std::ostream& operator<<(std::ostream& os, const SIRTKey& cp) {
+  std::ostream& operator<<(std::ostream& os, const ADKey& cp) {
     return os << '(' << cp.kind << ')';
   }
 };
 
 
 // This is as much of the marking as the transition will see.
-using Local=LocalMarking<Uncolored<IndividualToken>>;
+using Local=LocalMarking<Uncolored<SimpleToken>,Uncolored<HerdToken>>;
 // Extra state to add to the system state. Will be passed to transitions.
 struct WithParams {
   // Put our parameters here.
-  std::map<SIRParam,double> params;
+  std::map<ADParam,double> dparams;
+  std::map<ADParam,int> iparams;
 };
 
 
@@ -95,28 +114,30 @@ using SIRTransition=ExplicitTransition<Local,RandGen,WithParams>;
 using Dist=TransitionDistribution<RandGen>;
 using ExpDist=ExponentialDistribution<RandGen>;
 
+bool is_infectious(DiseaseState s) {
+  return (s==DiseaseState::Subclinical) || (s==DiseaseState::Clinical);
+}
 
+bool is_infected(DiseaseState s) {
+  return (s==DiseaseState::Latent) || is_infectious(s);
+}
 
-// Now make specific transitions.
-class Infect : public SIRTransition
-{
+// Herd infects neighboring herd directly.
+class Infect : public SIRTransition {
   virtual std::pair<bool, std::unique_ptr<Dist>>
   Enabled(const UserState& s, const Local& lm,
     double te, double t0, RandGen& rng) override {
     // If these are just size_t, then the rate calculation overflows.
-    int64_t S=lm.template Length<0>(0);
-    int64_t I=lm.template Length<0>(1);
-    int64_t R=lm.template Length<0>(2);
-    if (S>0 && I>0) {
-      double rate=S*I*s.params.at(SIRParam::Beta0)*
-        (1.0+s.params.at(SIRParam::Beta1)*
-          std::cos(2*boost::math::constants::pi<double>()*(
-            t0-s.params.at(SIRParam::SeasonalPhase))))/
-          (S+I+R);
-      SMVLOG(BOOST_LOG_TRIVIAL(trace)<<"infection rate "<<rate<<" beta0 "<<
-        s.params.at(SIRParam::Beta0) << " beta1 " <<
-        s.params.at(SIRParam::Beta1) << " t0 " << t0 << " N "<<(S+I+R)
-        << " S "<<S <<" I " << I);
+    auto SC=lm.template GetToken<1>(0, [](const HerdToken& t)->bool {
+      return t.disease_state==DiseaseState::Susceptible;
+    });
+    assert(SC.second==true);
+    auto IC=lm.template GetToken<1>(1, [](const HerdToken& t)->bool {
+      return is_infectious(t.disease_state);
+    });
+    assert(IC.second==true);
+    if (SC.first && IC.first) {
+      double rate=s.dparams.at(ADParam::Beta0);
       return {true, std::unique_ptr<ExpDist>(new ExpDist(rate, te))};
     } else {
       SMVLOG(BOOST_LOG_TRIVIAL(trace)<<"infection disable");
@@ -127,84 +148,11 @@ class Infect : public SIRTransition
   virtual void Fire(UserState& s, Local& lm, double t0,
       RandGen& rng) override {
     SMVLOG(BOOST_LOG_TRIVIAL(trace) << "Fire infection " << lm);
-    // s0 i1 r2 i3 r4
-    lm.template Move<0,0>(0, 3, 1);
-  }
-};
-
-
-
-
-
-// Now make specific transitions.
-class Recover : public SIRTransition
-{
-  virtual std::pair<bool, std::unique_ptr<Dist>>
-  Enabled(const UserState& s, const Local& lm,
-    double te, double t0, RandGen& rng) override {
-    int64_t I=lm.template Length<0>(0);
-    if (I>0) {
-      double rate=I*s.params.at(SIRParam::Gamma);
-      SMVLOG(BOOST_LOG_TRIVIAL(trace)<<"recover rate "<< rate);
-      return {true, std::unique_ptr<ExpDist>(
-        new ExpDist(rate, te))};
-    } else {
-      SMVLOG(BOOST_LOG_TRIVIAL(trace)<<"recover disable");
-      return {false, std::unique_ptr<Dist>(nullptr)};
-    }
-  }
-
-  virtual void Fire(UserState& s, Local& lm, double t0,
-      RandGen& rng) override {
-    SMVLOG(BOOST_LOG_TRIVIAL(trace) << "Fire infection " << lm);
-    lm.template Move<0, 0>(0, 1, 1);
-  }
-};
-
-
-
-// Now make specific transitions.
-class Birth : public SIRTransition
-{
-  virtual std::pair<bool, std::unique_ptr<Dist>>
-  Enabled(const UserState& s, const Local& lm,
-    double te, double t0, RandGen& rng) override {
-    if (s.params.at(SIRParam::Birth)>0) {
-      return {true, std::unique_ptr<ExpDist>(
-        new ExpDist(s.params.at(SIRParam::Birth), te))};
-    } else {
-      return {false, std::unique_ptr<Dist>(nullptr)};
-    }
-  }
-
-  virtual void Fire(UserState& s, Local& lm, double t0,
-      RandGen& rng) override {
-    SMVLOG(BOOST_LOG_TRIVIAL(trace) << "Fire infection " << lm);
-    lm.template Add<0>(1, IndividualToken{});
-  }
-};
-
-
-
-// Now make specific transitions.
-class Death : public SIRTransition
-{
-  virtual std::pair<bool, std::unique_ptr<Dist>>
-  Enabled(const UserState& s, const Local& lm,
-    double te, double t0, RandGen& rng) override {
-    int64_t SIR=lm.template Length<0>(0);
-    if (SIR>0 && s.params.at(SIRParam::Mu)>0) {
-      return {true, std::unique_ptr<ExpDist>(
-        new ExpDist(SIR*s.params.at(SIRParam::Mu), te))};
-    } else {
-      return {false, std::unique_ptr<Dist>(nullptr)};
-    }
-  }
-
-  virtual void Fire(UserState& s, Local& lm, double t0,
-      RandGen& rng) override {
-    SMVLOG(BOOST_LOG_TRIVIAL(trace) << "Fire infection " << lm);
-    lm.template Remove<0>(0, 1, rng);
+    const auto infector=[](HerdToken& t) {
+      assert(t.disease_state==DiseaseState::Susceptible);
+      t.disease_state=DiseaseState::Latent;
+    };
+    lm.template Move<1, 1, decltype(infector)>(0, 0, 1, infector);
   }
 };
 
@@ -213,56 +161,32 @@ class Death : public SIRTransition
 
 // The GSPN itself.
 using SIRGSPN=
-    ExplicitTransitions<SIRPlace, SIRTKey, Local, RandGen, WithParams>;
+    ExplicitTransitions<ADPlace, ADKey, Local, RandGen, WithParams>;
 
-/*! SIR infection on an all-to-all graph of uncolored tokens.
- */
+
 SIRGSPN
-BuildSystem(int64_t individual_cnt, bool exactbeta)
-{
+BuildSystem(int64_t herd_cnt) {
   BuildGraph<SIRGSPN> bg;
   using Edge=BuildGraph<SIRGSPN>::PlaceEdge;
 
-  enum { s, i, r };
-
-  for (int place : std::vector<int>{s, i, r}) {
-    bg.AddPlace({place}, 0);
+  int herd_kind=0;
+  for (int location_idx=0; location_idx<herd_cnt; ++location_idx ) {
+    bg.AddPlace({location_idx, herd_kind}, 1);
   }
 
   enum { infect, recover, birth, deaths, deathi, deathr };
 
-
-  BOOST_LOG_TRIVIAL(info)<<"Using piecewise seasonal infection";
-  bg.AddTransition({infect},
-    {Edge{{s}, -1}, Edge{{i}, -1}, Edge{{r}, -1}, Edge{{i}, 2}, Edge{{r}, 1}},
-    std::unique_ptr<SIRTransition>(new Infect())
-    );
-
-
-  bg.AddTransition({recover},
-    {Edge{{i}, -1}, Edge{{r}, 1}},
-    std::unique_ptr<SIRTransition>(new Recover())
-    );
-
-  bg.AddTransition({birth},
-    {Edge{{s}, -1}, Edge{{s}, 2}},
-    std::unique_ptr<SIRTransition>(new Birth())
-    );
-
-  bg.AddTransition({deaths},
-    {Edge{{s}, -1}, Edge{{s}, 0}},
-    std::unique_ptr<SIRTransition>(new Death())
-    );
-
-  bg.AddTransition({deathi},
-    {Edge{{i}, -1}, Edge{{i}, 0}},
-    std::unique_ptr<SIRTransition>(new Death())
-    );
-
-  bg.AddTransition({deathr},
-    {Edge{{r}, -1}, Edge{{r}, 0}},
-    std::unique_ptr<SIRTransition>(new Death())
-    );
+  for (int source_idx=0; source_idx<herd_cnt; ++source_idx) {
+    for (int target_idx=0; target_idx<herd_cnt; ++target_idx) {
+      if (target_idx!=source_idx) {
+        bg.AddTransition({infect},
+          {Edge{{target_idx, herd_kind}, -1},
+           Edge{{source_idx, herd_kind}, -1}},
+          std::unique_ptr<SIRTransition>(new Infect())
+          );
+      }
+    }
+  }
 
   // std::move the transitions because they contain unique_ptr.
   return std::move(bg.Build());
@@ -270,88 +194,32 @@ BuildSystem(int64_t individual_cnt, bool exactbeta)
 
 
 
-template<typename SIRState>
-struct SIROutput
-{
-  std::vector<int64_t> places_;
-  std::map<int64_t,int> transitions_;
-  using StateArray=std::array<int64_t,3>;
-  double max_time_;
-  int64_t max_count_;
-  TrajectoryObserver& observer_;
-  std::array<int64_t,3> sir_;
+template<typename GSPN, typename SIRState>
+struct SIROutput {
+  GSPN& gspn_;
+  std::shared_ptr<TrajectoryObserver> observer_;
 
-  SIROutput(double max_time, int64_t max_count,
-    const std::vector<int64_t>& sir_places,
-    const std::map<int64_t,int>& sir_transitions,
-    TrajectoryObserver& observer)
-  : places_{sir_places}, max_time_(max_time), max_count_(max_count),
-    observer_(observer), transitions_(sir_transitions) {
-    for (auto& t : transitions_) {
-      BOOST_LOG_TRIVIAL(debug)<<"gspn transition "<<t.first<<"="<<t.second;
-    }
-    for (auto& p: places_) {
-      BOOST_LOG_TRIVIAL(debug)<<"gspn place "<<p;
-    }
+  SIROutput(GSPN& gspn, std::shared_ptr<TrajectoryObserver> observer)
+  : gspn_(gspn), observer_(observer) { 
   };
 
   int64_t step_cnt{0};
 
   void operator()(const SIRState& state) {
-    int64_t S=Length<0>(state.marking, places_[0]);
-    int64_t I=Length<0>(state.marking, places_[1]);
-    int64_t R=Length<0>(state.marking, places_[2]);
+    auto transition=gspn_.VertexTransition(state.last_transition);
     SMVLOG(BOOST_LOG_TRIVIAL(trace)<<"last transition "<<state.last_transition);
-    SMVLOG(BOOST_LOG_TRIVIAL(trace)<<"S="<<S<<" I="<<I<<" R="<<R);
 
-    if (step_cnt>0) {
-      switch (transitions_[state.last_transition]) {
-        case 0: // infect
-          assert(S+I+R==sir_[0]+sir_[1]+sir_[2]);
-          assert(sir_[0]-S==1);
-          assert(I-sir_[1]==1);
-          assert(R==sir_[2]);
-          break;
-        case 1: // recover
-          assert(S+I+R==sir_[0]+sir_[1]+sir_[2]);
-          assert(sir_[1]-I==1);
-          assert(R-sir_[2]==1);
-          assert(S==sir_[0]);
-          break;
-        case 2: // birth
-          assert(I==sir_[1]);
-          assert(R==sir_[2]);
-          assert(S==sir_[0]+1);
-          break;
-        case 3: // death s
-          assert(I==sir_[1]);
-          assert(R==sir_[2]);
-          assert(S==sir_[0]-1);
-          break;
-        case 4: // death i
-          assert(S==sir_[0]);
-          assert(R==sir_[2]);
-          assert(I==sir_[1]-1);
-          break;
-        case 5: // death r
-          assert(S==sir_[0]);
-          assert(I==sir_[1]);
-          assert(R==sir_[2]-1);
-          break;
-        default:
-          assert(transitions_[state.last_transition]<6);
-          assert(transitions_[state.last_transition]>=0);
-          break;
-      }
-    } else {
-      ; // This is the first step.
+    // infection
+    if (transition.kind==0) {
+      auto transition_places=
+          NeighborsOfTransition(gspn_, state.last_transition);
+      int64_t target=gspn_.VertexPlace(
+          std::get<0>(transition_places[0])).location;
+      int64_t source=gspn_.VertexPlace(
+          std::get<0>(transition_places[1])).location;
+      observer_->Step({transition.kind, target, source, state.CurrentTime()});
     }
-
     ++step_cnt;
-    observer_.Step({S, I, R, state.CurrentTime()});
-    sir_[0]=S;
-    sir_[1]=I;
-    sir_[2]=R;
   }
 
   void final(const SIRState& state) {
@@ -361,57 +229,50 @@ struct SIROutput
 
 
 
-int64_t SIR_run(double end_time, const std::vector<int64_t>& sir_cnt,
-    const std::vector<Parameter>& parameters, TrajectoryObserver& observer,
-    RandGen& rng, bool infect_exact)
+int64_t SIR_run(double end_time, const std::vector<Parameter>& parameters,
+    Scenario& scenario, std::shared_ptr<TrajectoryObserver> observer,
+    RandGen& rng)
 {
-  int64_t individual_cnt=std::accumulate(sir_cnt.begin(), sir_cnt.end(),
-    int64_t{0});
-  auto gspn=BuildSystem(individual_cnt, infect_exact);
+  int64_t herd_cnt=scenario.size();
+  int64_t herd_size=100;
+  auto gspn=BuildSystem(herd_cnt);
 
   // Marking of the net.
   static_assert(std::is_same<int64_t,SIRGSPN::PlaceKey>::value,
     "The GSPN's internal place type is int64_t.");
-  using Mark=Marking<SIRGSPN::PlaceKey, Uncolored<IndividualToken>>;
-  using SIRState=GSPNState<Mark,SIRGSPN::TransitionKey,WithParams>;
+  using Mark=Marking<SIRGSPN::PlaceKey, Uncolored<SimpleToken>,
+    Uncolored<HerdToken>>;
+  using ADState=GSPNState<Mark,SIRGSPN::TransitionKey,WithParams>;
 
-  SIRState state;
+  ADState state;
   for (auto& cp : parameters) {
-    state.user.params[cp.kind]=cp.value;
+    state.user.dparams[cp.kind]=cp.value;
   }
 
-  std::vector<int64_t> sir_places;
-  for (int place_idx=0; place_idx<3; ++place_idx) {
-    auto place=gspn.PlaceVertex({place_idx});
-    sir_places.push_back(place);
-  }
-
-  for (int64_t sir_idx=0; sir_idx<3; ++sir_idx) {
-    for (int64_t sus_idx=0; sus_idx<sir_cnt[sir_idx]; ++sus_idx) {
-      Add<0>(state.marking, sir_places[sir_idx], IndividualToken{});
+  int64_t infected_herd=smv::uniform_index(rng, herd_cnt);
+  for (int64_t init_idx=0; init_idx<herd_cnt; ++init_idx) {
+    auto vertex_id=gspn.PlaceVertex({init_idx, 0});
+    if (init_idx!=infected_herd) {
+      Add<1>(state.marking, vertex_id, {DiseaseState::Susceptible, herd_size});
+    } else {
+      Add<1>(state.marking, vertex_id, {DiseaseState::Clinical, herd_size});
     }
   }
 
   //using Propagator=PropagateCompetingProcesses<int64_t,RandGen>;
   using Propagator=NonHomogeneousPoissonProcesses<int64_t,RandGen>;
   Propagator competing;
-  using Dynamics=StochasticDynamics<SIRGSPN,SIRState,RandGen>;
+  using Dynamics=StochasticDynamics<SIRGSPN,ADState,RandGen>;
   Dynamics dynamics(gspn, {&competing});
 
   BOOST_LOG_TRIVIAL(debug) << state.marking;
 
-  std::map<int64_t,int> trans;
-  for (size_t t_idx=0; t_idx<6; ++t_idx) {
-    trans[gspn.TransitionVertex(t_idx)]=t_idx;
-  }
-
-  SIROutput<SIRState> output_function(end_time, individual_cnt*2,
-    sir_places, trans, observer);
+  SIROutput<SIRGSPN,ADState> output_function(gspn, observer);
 
   dynamics.Initialize(&state, &rng);
 
   bool running=true;
-  auto nothing=[](SIRState&)->void {};
+  auto nothing=[](ADState&)->void {};
   double last_time=state.CurrentTime();
   while (running && state.CurrentTime()<end_time) {
     running=dynamics(state);

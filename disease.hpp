@@ -3,18 +3,22 @@
 #include <map>
 #include <random>
 #include "boost/random/mersenne_twister.hpp"
+#include "scenario.hpp"
 //#include "mt19937.hpp"
 
 //using RandGen=afidd::rng::mt19937;
 using RandGen=boost::mt19937;
 
-enum class SIRParam { Beta0, Beta1, Gamma, Birth, Mu, SeasonalPhase };
+enum class ADParam { Beta0, Beta1, Gamma, Birth, Mu, SeasonalPhase };
+enum class DiseaseState : int { None, Susceptible, Latent,
+  Subclinical, Clinical, Recovered, Immune, Vaccinated, Dead };
+
 struct Parameter {
-  SIRParam kind;
+  ADParam kind;
   std::string name;
   double value;
   std::string description;
-  Parameter(SIRParam k, std::string n, double v, std::string desc)
+  Parameter(ADParam k, std::string n, double v, std::string desc)
   : kind(k), name(n), value(v), description(desc) {}
   Parameter()=default;
 };
@@ -37,8 +41,8 @@ public:
 };
 
 
-int64_t SIR_run(double time_limit, const std::vector<int64_t>& sir_cnt,
-    const std::vector<Parameter>& parameters, TrajectoryObserver& observer,
-    RandGen& rng, bool infect_exact);
+int64_t SIR_run(double time_limit,const std::vector<Parameter>& parameters,
+  Scenario& scenario, std::shared_ptr<TrajectoryObserver> observer,
+  RandGen& rng);
 
 #endif
