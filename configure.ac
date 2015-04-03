@@ -29,8 +29,6 @@ AC_CHECK_LIB([m],[cos])
 AC_CHECK_LIB([gslcblas],[cblas_dgemm])
 AC_CHECK_LIB([gsl],[gsl_blas_dgemm])
 #AC_SEARCH_LIBS([main], [gsl])
-#AC_CHECK_LIB([gsl], [main])
-#AC_CHECK_LIB([gslcblas], [main])
 AC_CHECK_LIB([hdf5], [main])
 AC_CHECK_LIB([hdf5_hl], [main])
 
