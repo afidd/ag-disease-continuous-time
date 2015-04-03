@@ -219,7 +219,7 @@ CC = gcc
 CCDEPMODE = depmode=gcc3
 CFLAGS = -g -O2
 CPP = gcc -E
-CPPFLAGS = 
+CPPFLAGS = -I/usr/local/include
 CXX = g++
 CXXDEPMODE = depmode=gcc3
 CXXFLAGS = -g -O2 -std=c++11
@@ -240,7 +240,7 @@ INSTALL_SCRIPT = ${INSTALL}
 INSTALL_STRIP_PROGRAM = $(install_sh) -c -s
 LDFLAGS = 
 LIBOBJS = 
-LIBS = -lhdf5_hl -lhdf5 -lgslcblas -lgsl 
+LIBS = -lhdf5_hl -lhdf5 -lgsl -lgslcblas -lm 
 LTLIBOBJS = 
 MAKEINFO = ${SHELL} /home/ajd27/Documents/adct/missing makeinfo
 MKDIR_P = /bin/mkdir -p
@@ -256,6 +256,7 @@ PATH_SEPARATOR = :
 PTHREAD_CC = gcc
 PTHREAD_CFLAGS = -pthread
 PTHREAD_LIBS = 
+SEMIMARKOV_CXXFLAGS = -I/usr/local/include/semimarkov-0.1
 SET_MAKE = 
 SHELL = /bin/sh
 STRIP = 
