@@ -21,18 +21,18 @@ Prerequisites
 This package uses GNU Autotools for installation, which
 means the two steps are:
 
-'''bash
+```bash
 ./configure
 make
-'''
+```
 
 The typical options for `configure` apply and are described in the
 INSTALL file, but two options will be most important:
 
-'''bash
+```bash
 ./configure --with-boost=/home/ajd27/Documents/boost_1_57_0 \
             --with-semimarkov=/usr/local/include/semimarkov-0.1
-'''
+```
 
 These tell configure where to find boost libraries and
 the Semi-Markov library.
