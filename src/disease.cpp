@@ -18,6 +18,7 @@
 #include "smv.hpp"
 #include "disease.hpp"
 
+
 namespace smv=afidd::smv;
 using namespace smv;
 
@@ -124,6 +125,12 @@ bool is_infected(DiseaseState s) {
 
 // Herd infects neighboring herd directly.
 class Infect : public SIRTransition {
+ private:
+  double rate_;
+ public:
+  Infect(double rate) : rate_(rate) {}
+  virtual ~Infect() {}
+
   virtual std::pair<bool, std::unique_ptr<Dist>>
   Enabled(const UserState& s, const Local& lm,
     double te, double t0, RandGen& rng) override {
@@ -137,8 +144,7 @@ class Infect : public SIRTransition {
     });
     assert(IC.second==true);
     if (SC.first && IC.first) {
-      double rate=s.dparams.at(ADParam::Beta0);
-      return {true, std::unique_ptr<ExpDist>(new ExpDist(rate, te))};
+      return {true, std::unique_ptr<ExpDist>(new ExpDist(rate_, te))};
     } else {
       SMVLOG(BOOST_LOG_TRIVIAL(trace)<<"infection disable");
       return {false, std::unique_ptr<Dist>(nullptr)};
@@ -165,7 +171,8 @@ using SIRGSPN=
 
 
 SIRGSPN
-BuildSystem(int64_t herd_cnt) {
+BuildSystem(Scenario<RandGen>& scenario) {
+  int64_t herd_cnt=scenario.herd_cnt();
   BuildGraph<SIRGSPN> bg;
   using Edge=BuildGraph<SIRGSPN>::PlaceEdge;
 
@@ -179,10 +186,11 @@ BuildSystem(int64_t herd_cnt) {
   for (int source_idx=0; source_idx<herd_cnt; ++source_idx) {
     for (int target_idx=0; target_idx<herd_cnt; ++target_idx) {
       if (target_idx!=source_idx) {
+        double rate=scenario.airborne_hazard(source_idx, target_idx);
         bg.AddTransition({infect},
           {Edge{{target_idx, herd_kind}, -1},
            Edge{{source_idx, herd_kind}, -1}},
-          std::unique_ptr<SIRTransition>(new Infect())
+          std::unique_ptr<SIRTransition>(new Infect(rate))
           );
       }
     }
@@ -230,12 +238,12 @@ struct SIROutput {
 
 
 int64_t SIR_run(double end_time, const std::vector<Parameter>& parameters,
-    Scenario& scenario, std::shared_ptr<TrajectoryObserver> observer,
+    Scenario<RandGen>& scenario, std::shared_ptr<TrajectoryObserver> observer,
     RandGen& rng)
 {
-  int64_t herd_cnt=scenario.size();
+  int64_t herd_cnt=scenario.herd_cnt();
   int64_t herd_size=100;
-  auto gspn=BuildSystem(herd_cnt);
+  auto gspn=BuildSystem(scenario);
 
   // Marking of the net.
   static_assert(std::is_same<int64_t,SIRGSPN::PlaceKey>::value,

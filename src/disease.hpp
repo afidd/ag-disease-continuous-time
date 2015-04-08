@@ -42,7 +42,7 @@ public:
 
 
 int64_t SIR_run(double time_limit,const std::vector<Parameter>& parameters,
-  Scenario& scenario, std::shared_ptr<TrajectoryObserver> observer,
+  Scenario<RandGen>& scenario, std::shared_ptr<TrajectoryObserver> observer,
   RandGen& rng);
 
 #endif

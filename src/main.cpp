@@ -222,7 +222,7 @@ int main(int argc, char *argv[]) {
   file.WriteExecutableData(compile_info, parsed_options, sir_init);
 
   auto runnable=[=](RandGen& rng, size_t single_seed, size_t idx)->void {
-    Scenario scenario(individual_cnt);
+    Scenario<RandGen> scenario(individual_cnt, rng);
     std::shared_ptr<TrajectoryObserver> observer=0;
     if (exacttraj) {
       observer=std::make_shared<TrajectorySave>();
