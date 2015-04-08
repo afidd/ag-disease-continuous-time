@@ -9,7 +9,7 @@
 //using RandGen=afidd::rng::mt19937;
 using RandGen=boost::mt19937;
 
-enum class ADParam { Beta0, Beta1, Gamma, Birth, Mu, SeasonalPhase };
+enum class ADParam { Beta0, Beta1, Gamma, Birth, Mu, SeasonalPhase, FirstFarm };
 enum class DiseaseState : int { None, Susceptible, Latent,
   Subclinical, Clinical, Recovered, Immune, Vaccinated, Dead };
 

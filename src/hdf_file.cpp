@@ -281,7 +281,39 @@ class HDFFile::impl {
     herr_t space_status=H5Sclose(dataspace_id);
     return true;
   }
+
+  bool SaveLocations(const std::vector<std::array<double,2>>& locations) const {
+    std::unique_lock<std::mutex> only_me(single_writer_);
+    assert(open_);
+    hsize_t dims[2];
+    dims[0]=locations.size();
+    dims[1]=2;
+    hid_t dataspace_id=H5Screate_simple(2, dims, NULL);
+
+    hid_t dataset_id=H5Dcreate2(trajectory_group_, "locations",
+      H5T_NATIVE_DOUBLE, dataspace_id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+    if (dataset_id<0) {
+      BOOST_LOG_TRIVIAL(error)<<"Could not create dataset for locations";
+      H5Sclose(dataspace_id);
+      return false;
+    }
+
+    herr_t write_status=H5Dwrite(dataset_id, H5T_NATIVE_DOUBLE,
+      H5S_ALL, H5S_ALL, H5P_DEFAULT, locations.data());
+    if (write_status<0) {
+      BOOST_LOG_TRIVIAL(error)<<"Could not write data for locations "
+        <<write_status;
+      H5Dclose(dataset_id);
+      H5Sclose(dataspace_id);
+      return false;
+    }
+    H5Dclose(dataset_id);
+    H5Sclose(dataspace_id);
+    return true;
+  }
+
 };
+
 
 HDFFile::HDFFile(const std::string& fname) : pimpl{ new impl{ fname }} {}
 HDFFile::~HDFFile() {}
@@ -290,6 +322,9 @@ bool HDFFile::Close() { return pimpl->Close(); }
 bool HDFFile::SaveTrajectory(const std::vector<Parameter>& params,
   int seed, int idx, const TrajectoryType& traj) const {
   return pimpl->SaveTrajectory(params, seed, idx, traj);
+}
+bool HDFFile::SaveLocations(const std::vector<std::array<double,2>>& locs) const {
+  return pimpl->SaveLocations(locs);
 }
 bool HDFFile::WriteExecutableData(
     const std::map<std::string,std::string>& compile,

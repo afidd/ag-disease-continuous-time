@@ -116,7 +116,8 @@ using Dist=TransitionDistribution<RandGen>;
 using ExpDist=ExponentialDistribution<RandGen>;
 
 bool is_infectious(DiseaseState s) {
-  return (s==DiseaseState::Subclinical) || (s==DiseaseState::Clinical);
+  return (s==DiseaseState::Subclinical) || (s==DiseaseState::Clinical) ||
+    (s==DiseaseState::Latent);
 }
 
 bool is_infected(DiseaseState s) {
@@ -134,26 +135,25 @@ class Infect : public SIRTransition {
   virtual std::pair<bool, std::unique_ptr<Dist>>
   Enabled(const UserState& s, const Local& lm,
     double te, double t0, RandGen& rng) override {
-    // If these are just size_t, then the rate calculation overflows.
+    SMVLOG(BOOST_LOG_TRIVIAL(trace)<<"Infect::Enabled begin");
     auto SC=lm.template GetToken<1>(0, [](const HerdToken& t)->bool {
       return t.disease_state==DiseaseState::Susceptible;
     });
-    assert(SC.second==true);
     auto IC=lm.template GetToken<1>(1, [](const HerdToken& t)->bool {
       return is_infectious(t.disease_state);
     });
-    assert(IC.second==true);
-    if (SC.first && IC.first) {
+    if (IC.second && SC.second && SC.first && IC.first) {
+      SMVLOG(BOOST_LOG_TRIVIAL(trace)<<"Infect::Enabled enable "<<rate_);
       return {true, std::unique_ptr<ExpDist>(new ExpDist(rate_, te))};
     } else {
-      SMVLOG(BOOST_LOG_TRIVIAL(trace)<<"infection disable");
+      SMVLOG(BOOST_LOG_TRIVIAL(trace)<<"Infect::Enabled disable");
       return {false, std::unique_ptr<Dist>(nullptr)};
     }
   }
 
   virtual void Fire(UserState& s, Local& lm, double t0,
       RandGen& rng) override {
-    SMVLOG(BOOST_LOG_TRIVIAL(trace) << "Fire infection " << lm);
+    SMVLOG(BOOST_LOG_TRIVIAL(trace) << "Infect::Fire " << lm);
     const auto infector=[](HerdToken& t) {
       assert(t.disease_state==DiseaseState::Susceptible);
       t.disease_state=DiseaseState::Latent;
@@ -221,10 +221,29 @@ struct SIROutput {
     if (transition.kind==0) {
       auto transition_places=
           NeighborsOfTransition(gspn_, state.last_transition);
+      int64_t target_internal_place=std::get<0>(transition_places[0]);
+      int64_t source_internal_place=std::get<0>(transition_places[1]);
       int64_t target=gspn_.VertexPlace(
           std::get<0>(transition_places[0])).location;
       int64_t source=gspn_.VertexPlace(
           std::get<0>(transition_places[1])).location;
+
+      size_t token_cnt=Length<1>(state.marking, target_internal_place);
+      assert(token_cnt==1);
+
+      auto res=Get<1>(state.marking, target_internal_place,
+        [](const HerdToken& t)->bool {
+          return is_infectious(t.disease_state);
+        });
+      assert(res.second==true);
+      assert(res.first==true);
+      auto sres=Get<1>(state.marking, source_internal_place,
+        [](const HerdToken& t)->bool {
+          return is_infectious(t.disease_state);
+        });
+      assert(sres.second==true);
+      assert(sres.first==true);
+
       observer_->Step({transition.kind, target, source, state.CurrentTime()});
     }
     ++step_cnt;
@@ -257,7 +276,8 @@ int64_t SIR_run(double end_time, const std::vector<Parameter>& parameters,
     state.user.dparams[cp.kind]=cp.value;
   }
 
-  int64_t infected_herd=smv::uniform_index(rng, herd_cnt);
+  int64_t infected_herd=std::round<int64_t>(
+      state.user.dparams[ADParam::FirstFarm]);
   for (int64_t init_idx=0; init_idx<herd_cnt; ++init_idx) {
     auto vertex_id=gspn.PlaceVertex({init_idx, 0});
     if (init_idx!=infected_herd) {

@@ -85,6 +85,8 @@ int main(int argc, char *argv[]) {
     "crude rate, before multiplying by number of individuals"});
   parameters.emplace_back(Parameter{ADParam::Mu, "mu", 1/70.0,
     "death rate"});
+  parameters.emplace_back(Parameter{ADParam::FirstFarm, "firstfarm", 0,
+    "first farm infected"});
   double end_time=30.0;
   bool exacttraj=true;
   bool exactinfect=false;
@@ -220,9 +222,19 @@ int main(int argc, char *argv[]) {
     return -1;
   }
   file.WriteExecutableData(compile_info, parsed_options, sir_init);
+  RandGen rng2(rand_seed+1);
+  Scenario<RandGen> scenario(individual_cnt, rng2);
+  auto& locations=scenario.GetLocations();
+  BOOST_LOG_TRIVIAL(debug)<<"locations";
+  for ( auto l : locations) {
+    double x=std::get<0>(l);
+    double y=std::get<1>(l);
+    BOOST_LOG_TRIVIAL(debug)<<x<<'\t'<<y;
+  }
+  file.SaveLocations(locations);
 
-  auto runnable=[=](RandGen& rng, size_t single_seed, size_t idx)->void {
-    Scenario<RandGen> scenario(individual_cnt, rng);
+  auto runnable=[=, &scenario](RandGen& rng, size_t single_seed,
+      size_t idx)->void {
     std::shared_ptr<TrajectoryObserver> observer=0;
     if (exacttraj) {
       observer=std::make_shared<TrajectorySave>();
@@ -234,8 +246,8 @@ int main(int argc, char *argv[]) {
     file.SaveTrajectory(parameters, single_seed, idx, observer->Trajectory());
   };
 
-  Ensemble<decltype(runnable)> ensemble(runnable, thread_cnt, run_cnt,
-    rand_seed);
+  afidd::smv::Ensemble<decltype(runnable),RandGen> ensemble(runnable,
+    thread_cnt, run_cnt, rand_seed);
   ensemble.Run();
   BOOST_LOG_TRIVIAL(debug)<<"Finished running ensemble.";
 

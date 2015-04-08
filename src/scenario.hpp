@@ -15,6 +15,9 @@ class Scenario {
   double airborne_hazard(int64_t i, int64_t j) {
     return 1./distance2(i, j);
   }
+  std::vector<std::array<double,2>>& GetLocations() {
+    return locations_;
+  }
   double distance2(int64_t i, int64_t j) {
     auto& ixy=locations_[i];
     auto& jxy=locations_[j];
@@ -23,7 +26,7 @@ class Scenario {
   }
  private:
   void InitializeSpatial(RNG& rng) {
-    locations_=hard_sphere_process({0., 1., 0., 1.}, herd_cnt_, 0.2, rng);
+    locations_=complete_spatial_randomness({0., 1., 0., 1.}, herd_cnt_, rng);
   }
   std::vector<std::array<double,2>> locations_;
   size_t herd_cnt_;

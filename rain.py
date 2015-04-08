@@ -8,12 +8,42 @@ Author: Nicolas P. Rougier
 """
 import logging
 import numpy as np
+import h5py
 import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
 from  matplotlib.animation import FuncAnimation
 
+
+def datasets(open_file):
+    trajectories=open_file['/trajectory']
+    names=list()
+    for trajectory_name in trajectories:
+        if trajectory_name.startswith("dset"):
+            names.append(trajectory_name)
+    return names
+
+
+def transitions(open_file):
+    locations=open_file["/trajectory/locations"]
+    trajectory_name=datasets(open_file)[0]
+    dset=open_file["/trajectory/{0}".format(trajectory_name)]
+    events=list()
+    times=list()
+    events.append(0)
+    times.append(0.0)
+    for kind, whom, who, when in dset:
+        if kind==0:
+            events.append(whom)
+            times.append(when)
+    return (locations, np.array(events), np.array(times))
+
+
 logger=logging.getLogger(__file__)
 logging.basicConfig(level=logging.DEBUG)
+
+data_file="src/sirexp.h5"
+f=h5py.File(data_file)
+locations, farm_order, farm_times=transitions(f)
 
 color_choice={'susceptible' : 'black', 'infected' : 'orangered'}
 color_code=dict()
@@ -28,17 +58,17 @@ ax.set_xlim(0,1), ax.set_xticks([])
 ax.set_ylim(0,1), ax.set_yticks([])
 
 # Create rain data
-n_drops = 50
+n_drops = locations.shape[0]
 farm_cnt = n_drops
-end_time=30.0
+end_time=farm_times[-1]*1.01
 frame_cnt=1000
 frame_interval=10
 
 # Create disease data
-farm_order=np.arange(0, farm_cnt)
-np.random.shuffle(farm_order)
-farm_times=np.random.uniform(0, end_time, farm_cnt)
-farm_times.sort()
+#farm_order=np.arange(0, farm_cnt)
+#np.random.shuffle(farm_order)
+#farm_times=np.random.uniform(0, end_time, farm_cnt)
+#farm_times.sort()
 current_farm=0
 
 
@@ -50,7 +80,7 @@ marker_size=100
 
 # Initialize the raindrops in random positions and with
 # random growth rates.
-farms['position'] = np.random.uniform(0, 1, (n_drops, 2))
+farms['position'] = locations #np.random.uniform(0, 1, (n_drops, 2))
 farms['size'].fill(marker_size)
 farms['color'][:]=color_code['susceptible']
 
@@ -91,7 +121,8 @@ def update(frame_number):
     global farm_order
     global farm_times
     global farm_cnt
-    while current_farm<farm_cnt and farm_times[current_farm]<current_time:
+    while current_farm<len(farm_order) and \
+            farm_times[current_farm]<current_time:
         farm_idx=farm_order[current_farm]
         logger.debug("changing farm {0}".format(farm_idx))
         farms['color'][farm_idx] = color_code['infected']

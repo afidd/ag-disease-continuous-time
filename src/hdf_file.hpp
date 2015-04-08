@@ -20,6 +20,7 @@ class HDFFile {
   bool Close();
   bool SaveTrajectory(const std::vector<Parameter>& params,
     int seed, int idx, const TrajectoryType& trajectory) const;
+  bool SaveLocations(const std::vector<std::array<double,2>>& locs) const;
   bool WriteExecutableData(const std::map<std::string,std::string>& compile,
     boost::program_options::basic_parsed_options<char>& cmdline,
     const std::vector<int64_t>& initial_values) const;
