@@ -1,0 +1,169 @@
+# Data format
+
+The data file from this program is in HDF5, a hierarchical
+data format.
+
+## Group "/process"
+
+This should describe the scenario.
+
+## Group "/trajectory"
+
+This subgroup of the root group contains all trajectories in
+the file. The group, itself, has attributes.
+
+* COMPILETIME -- When the code was compiled. A UTC string date.
+
+* CONFIG -- Configuration information (Makefile). A string.
+
+* VERSION -- Identifier for git repository with a hash, as a string.
+
+* Initial Values -- Given a scenario, this says what the starting conditions are. In this case, it's which farm is infected and its state, so two integers.
+
+* Options -- String of command-line options in xml-ish. See the example.
+
+Each trajectory is an array of
+(H5T_STD_I64LE, H5T_STD_I64LE, H5T_STD_I64LE, H5T_IEEE_F64LE)
+where the first one is an event ID, the second to whom the event
+happened, the third possibly who caused the event, and the fourth the time.
+
+Attributes of the trajectory are parameters of the process that
+are changed from the scenario. Also a parameter is the integer that
+initialized the random number generator as "random seed".
+
+## Example
+
+```
+HDF5 "sirexp.h5" {
+GROUP "/" {
+   GROUP "trajectory" {
+      ATTRIBUTE "COMPILETIME" {
+         DATATYPE  H5T_STRING {
+            STRSIZE 26;
+            STRPAD H5T_STR_NULLTERM;
+            CSET H5T_CSET_ASCII;
+            CTYPE H5T_C_S1;
+         }
+         DATASPACE  SIMPLE { ( 1 ) / ( 1 ) }
+         DATA {
+         (0): "2015-04-01T22:09:25.060474"
+         }
+      }
+      ATTRIBUTE "CONFIG" {
+         DATATYPE  H5T_STRING {
+            STRSIZE 1762;
+            STRPAD H5T_STR_NULLTERM;
+            CSET H5T_CSET_ASCII;
+            CTYPE H5T_C_S1;
+         }
+         DATASPACE  SIMPLE { ( 1 ) / ( 1 ) }
+         DATA {
+         (0): "# Requires:
+           ... lots of lines...
+           clean:
+            rm -f *.o contact contact_version.hpp
+           "
+         }
+      }
+      ATTRIBUTE "Initial Values" {
+         DATATYPE  H5T_STD_I64LE
+         DATASPACE  SIMPLE { ( 3 ) / ( 3 ) }
+         DATA {
+         (0): 6, 0, 94
+         }
+      }
+      ATTRIBUTE "Options" {
+         DATATYPE  H5T_STRING {
+            STRSIZE 239;
+            STRPAD H5T_STR_NULLTERM;
+            CSET H5T_CSET_ASCII;
+            CTYPE H5T_C_S1;
+         }
+         DATASPACE  SIMPLE { ( 1 ) / ( 1 ) }
+         DATA {
+         (0): "<options><option><name>size</name><values><value>100</value></values></options><option><name>loglevel</name><values><value>debug</value></values></options><option><name>seed</name><values><value>3346666</value></values></options></options>"
+         }
+      }
+      ATTRIBUTE "VERSION" {
+         DATATYPE  H5T_STRING {
+            STRSIZE 92;
+            STRPAD H5T_STR_NULLTERM;
+            CSET H5T_CSET_ASCII;
+            CTYPE H5T_C_S1;
+         }
+         DATASPACE  SIMPLE { ( 1 ) / ( 1 ) }
+         DATA {
+         (0): "git@github.com:afidd/ag-disease-continuous-time.git:ad7ff4e5180717f39fdcf51937571ef6bac4edac"
+         }
+      }
+      DATASET "dset3346666-1" {
+         DATATYPE  H5T_COMPOUND {
+            H5T_STD_I64LE "s";
+            H5T_STD_I64LE "i";
+            H5T_STD_I64LE "r";
+            H5T_IEEE_F64LE "t";
+         }
+         DATASPACE  SIMPLE { ( 99 ) / ( 99 ) }
+         DATA {
+         (0): {
+               0,
+               19,
+               80,
+               1.65006e-05
+            },
+            ... lots of entries.
+         (98): {
+               0,
+               74,
+               80,
+               0.0187545
+            }
+         }
+         ATTRIBUTE "beta0" {
+            DATATYPE  H5T_IEEE_F64LE
+            DATASPACE  SIMPLE { ( 1 ) / ( 1 ) }
+            DATA {
+            (0): 400
+            }
+         }
+         ATTRIBUTE "beta1" {
+            DATATYPE  H5T_IEEE_F64LE
+            DATASPACE  SIMPLE { ( 1 ) / ( 1 ) }
+            DATA {
+            (0): 0.6
+            }
+         }
+         ATTRIBUTE "birth" {
+            DATATYPE  H5T_IEEE_F64LE
+            DATASPACE  SIMPLE { ( 1 ) / ( 1 ) }
+            DATA {
+            (0): 1.42857
+            }
+         }
+         ATTRIBUTE "gamma" {
+            DATATYPE  H5T_IEEE_F64LE
+            DATASPACE  SIMPLE { ( 1 ) / ( 1 ) }
+            DATA {
+            (0): 26.0714
+            }
+         }
+         ATTRIBUTE "mu" {
+            DATATYPE  H5T_IEEE_F64LE
+            DATASPACE  SIMPLE { ( 1 ) / ( 1 ) }
+            DATA {
+            (0): 0.0142857
+            }
+         }
+         ATTRIBUTE "phase" {
+            DATATYPE  H5T_IEEE_F64LE
+            DATASPACE  SIMPLE { ( 1 ) / ( 1 ) }
+            DATA {
+            (0): 0
+            }
+         }
+      }
+   }
+}
+}
+
+```
