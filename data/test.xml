@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<naadsm:disease-simulation
+  xmlns:naadsm="http://www.naadsm.org/schema"
+  xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+  xmlns:xml="http://www.w3.org/XML/1998/namespace">
+<models>
+ <disease-model>
+ </disease-model>
+</models>
+</naadsm:disease-simulation>

@@ -1,0 +1,866 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<naadsm:disease-simulation
+  xmlns:naadsm="http://www.naadsm.org/schema"
+  xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+  xmlns:xml="http://www.w3.org/XML/1998/namespace">
+  <description>SCENARIO 1 - No controls&#x000D;&#x000A;&#x000D;&#x000A;HPAI in Kershaw County, South Carolina&#x000D;&#x000A;Scenario built for comparison to AFIDD&#x000D;&#x000A;51 turkey farms, 1 layer farm, 3 broiler farms, 10 backyards&#x000D;&#x000A;Source of population information:  FLAPS (production types and number of birds/farm were modified by Kim)&#x000D;&#x000A;Source of parameters:  Patyk, et al.  An epidemiologic simulation model of the spread and control of highly pathogenic avian influenza (H5N1) among commercial and backyard poultry flocks in South Carolina, United States Prev Vet Med 110 (2013) 510-524.</description>
+  <naadsm-version>
+    <major-version>3</major-version>
+    <minor-version>2</minor-version>
+    <release>19</release>
+  </naadsm-version>
+  <language>en</language>
+
+  <num-runs>25</num-runs>
+  <num-days>32767</num-days>
+
+<models>
+
+  <disease-model production-type="backyard" production-type-id="1">
+    <latent-period>
+      <probability-density-function name="Latent Period">
+        <gamma>
+          <alpha>1.34</alpha>
+          <beta>0.18</beta>
+        </gamma>
+        <units><xdf:unit>day</xdf:unit></units>
+      </probability-density-function>
+    </latent-period>
+    <infectious-subclinical-period>
+      <probability-density-function name="Infectious Subclinical Period">
+        <point>
+          0
+        </point>
+        <units><xdf:unit>day</xdf:unit></units>
+      </probability-density-function>
+    </infectious-subclinical-period>
+    <infectious-clinical-period>
+      <probability-density-function name="Infectious Clinical Period:  Broilers Layers and Backyards">
+        <gamma>
+          <alpha>13.36</alpha>
+          <beta>1.57</beta>
+        </gamma>
+        <units><xdf:unit>day</xdf:unit></units>
+      </probability-density-function>
+    </infectious-clinical-period>
+    <immunity-period>
+      <probability-density-function name="Immune Period">
+        <point>
+          1000
+        </point>
+        <units><xdf:unit>day</xdf:unit></units>
+      </probability-density-function>
+    </immunity-period>
+  </disease-model>
+
+  <disease-model production-type="broilers" production-type-id="2">
+    <latent-period>
+      <probability-density-function name="Latent Period">
+        <gamma>
+          <alpha>1.34</alpha>
+          <beta>0.18</beta>
+        </gamma>
+        <units><xdf:unit>day</xdf:unit></units>
+      </probability-density-function>
+    </latent-period>
+    <infectious-subclinical-period>
+      <probability-density-function name="Infectious Subclinical Period">
+        <point>
+          0
+        </point>
+        <units><xdf:unit>day</xdf:unit></units>
+      </probability-density-function>
+    </infectious-subclinical-period>
+    <infectious-clinical-period>
+      <probability-density-function name="Infectious Clinical Period:  Broilers Layers and Backyards">
+        <gamma>
+          <alpha>13.36</alpha>
+          <beta>1.57</beta>
+        </gamma>
+        <units><xdf:unit>day</xdf:unit></units>
+      </probability-density-function>
+    </infectious-clinical-period>
+    <immunity-period>
+      <probability-density-function name="Immune Period">
+        <point>
+          1000
+        </point>
+        <units><xdf:unit>day</xdf:unit></units>
+      </probability-density-function>
+    </immunity-period>
+  </disease-model>
+
+  <disease-model production-type="layers" production-type-id="3">
+    <latent-period>
+      <probability-density-function name="Latent Period">
+        <gamma>
+          <alpha>1.34</alpha>
+          <beta>0.18</beta>
+        </gamma>
+        <units><xdf:unit>day</xdf:unit></units>
+      </probability-density-function>
+    </latent-period>
+    <infectious-subclinical-period>
+      <probability-density-function name="Infectious Subclinical Period">
+        <point>
+          0
+        </point>
+        <units><xdf:unit>day</xdf:unit></units>
+      </probability-density-function>
+    </infectious-subclinical-period>
+    <infectious-clinical-period>
+      <probability-density-function name="Infectious Clinical Period:  Broilers Layers and Backyards">
+        <gamma>
+          <alpha>13.36</alpha>
+          <beta>1.57</beta>
+        </gamma>
+        <units><xdf:unit>day</xdf:unit></units>
+      </probability-density-function>
+    </infectious-clinical-period>
+    <immunity-period>
+      <probability-density-function name="Immune Period">
+        <point>
+          1000
+        </point>
+        <units><xdf:unit>day</xdf:unit></units>
+      </probability-density-function>
+    </immunity-period>
+  </disease-model>
+
+  <disease-model production-type="turkeys" production-type-id="4">
+    <latent-period>
+      <probability-density-function name="Latent Period">
+        <gamma>
+          <alpha>1.34</alpha>
+          <beta>0.18</beta>
+        </gamma>
+        <units><xdf:unit>day</xdf:unit></units>
+      </probability-density-function>
+    </latent-period>
+    <infectious-subclinical-period>
+      <probability-density-function name="Infectious Subclinical Period">
+        <point>
+          0
+        </point>
+        <units><xdf:unit>day</xdf:unit></units>
+      </probability-density-function>
+    </infectious-subclinical-period>
+    <infectious-clinical-period>
+      <probability-density-function name="Infectious Clinical Period:  Turkeys">
+        <gamma>
+          <alpha>11.29</alpha>
+          <beta>2.08</beta>
+        </gamma>
+        <units><xdf:unit>day</xdf:unit></units>
+      </probability-density-function>
+    </infectious-clinical-period>
+    <immunity-period>
+      <probability-density-function name="Immune Period">
+        <point>
+          1000
+        </point>
+        <units><xdf:unit>day</xdf:unit></units>
+      </probability-density-function>
+    </immunity-period>
+  </disease-model>
+
+  <airborne-spread-exponential-model from-production-type = "backyard" to-production-type = "backyard">
+    <prob-spread-1km>0.5</prob-spread-1km>
+    <wind-direction-start>
+      <value>0</value>
+      <units><xdf:unit>degree</xdf:unit></units>
+    </wind-direction-start>
+    <wind-direction-end>
+      <value>360</value>
+      <units><xdf:unit>degree</xdf:unit></units>
+    </wind-direction-end>
+    <delay>
+      <probability-density-function name="Default airborne transport delay">
+        <point>
+          0
+        </point>
+        <units><xdf:unit>day</xdf:unit></units>
+      </probability-density-function>
+    </delay>
+  </airborne-spread-exponential-model>
+
+  <airborne-spread-exponential-model from-production-type = "backyard" to-production-type = "broilers">
+    <prob-spread-1km>0.5</prob-spread-1km>
+    <wind-direction-start>
+      <value>0</value>
+      <units><xdf:unit>degree</xdf:unit></units>
+    </wind-direction-start>
+    <wind-direction-end>
+      <value>360</value>
+      <units><xdf:unit>degree</xdf:unit></units>
+    </wind-direction-end>
+    <delay>
+      <probability-density-function name="Default airborne transport delay">
+        <point>
+          0
+        </point>
+        <units><xdf:unit>day</xdf:unit></units>
+      </probability-density-function>
+    </delay>
+  </airborne-spread-exponential-model>
+
+  <airborne-spread-exponential-model from-production-type = "backyard" to-production-type = "layers">
+    <prob-spread-1km>0.5</prob-spread-1km>
+    <wind-direction-start>
+      <value>0</value>
+      <units><xdf:unit>degree</xdf:unit></units>
+    </wind-direction-start>
+    <wind-direction-end>
+      <value>360</value>
+      <units><xdf:unit>degree</xdf:unit></units>
+    </wind-direction-end>
+    <delay>
+      <probability-density-function name="Default airborne transport delay">
+        <point>
+          0
+        </point>
+        <units><xdf:unit>day</xdf:unit></units>
+      </probability-density-function>
+    </delay>
+  </airborne-spread-exponential-model>
+
+
+  <airborne-spread-exponential-model from-production-type = "backyard" to-production-type = "turkeys">
+    <prob-spread-1km>0.5</prob-spread-1km>
+    <wind-direction-start>
+      <value>0</value>
+      <units><xdf:unit>degree</xdf:unit></units>
+    </wind-direction-start>
+    <wind-direction-end>
+      <value>360</value>
+      <units><xdf:unit>degree</xdf:unit></units>
+    </wind-direction-end>
+    <delay>
+      <probability-density-function name="Default airborne transport delay">
+        <point>
+          0
+        </point>
+        <units><xdf:unit>day</xdf:unit></units>
+      </probability-density-function>
+    </delay>
+  </airborne-spread-exponential-model>
+
+
+  <airborne-spread-exponential-model from-production-type = "broilers" to-production-type = "backyard">
+    <prob-spread-1km>0.5</prob-spread-1km>
+    <wind-direction-start>
+      <value>0</value>
+      <units><xdf:unit>degree</xdf:unit></units>
+    </wind-direction-start>
+    <wind-direction-end>
+      <value>360</value>
+      <units><xdf:unit>degree</xdf:unit></units>
+    </wind-direction-end>
+    <delay>
+      <probability-density-function name="Default airborne transport delay">
+        <point>
+          0
+        </point>
+        <units><xdf:unit>day</xdf:unit></units>
+      </probability-density-function>
+    </delay>
+  </airborne-spread-exponential-model>
+
+
+  <airborne-spread-exponential-model from-production-type = "broilers" to-production-type = "broilers">
+    <prob-spread-1km>0.5</prob-spread-1km>
+    <wind-direction-start>
+      <value>0</value>
+      <units><xdf:unit>degree</xdf:unit></units>
+    </wind-direction-start>
+    <wind-direction-end>
+      <value>360</value>
+      <units><xdf:unit>degree</xdf:unit></units>
+    </wind-direction-end>
+    <delay>
+      <probability-density-function name="Default airborne transport delay">
+        <point>
+          0
+        </point>
+        <units><xdf:unit>day</xdf:unit></units>
+      </probability-density-function>
+    </delay>
+  </airborne-spread-exponential-model>
+
+
+
+  <airborne-spread-exponential-model from-production-type = "broilers" to-production-type = "layers">
+    <prob-spread-1km>0.5</prob-spread-1km>
+    <wind-direction-start>
+      <value>0</value>
+      <units><xdf:unit>degree</xdf:unit></units>
+    </wind-direction-start>
+    <wind-direction-end>
+      <value>360</value>
+      <units><xdf:unit>degree</xdf:unit></units>
+    </wind-direction-end>
+    <delay>
+      <probability-density-function name="Default airborne transport delay">
+        <point>
+          0
+        </point>
+        <units><xdf:unit>day</xdf:unit></units>
+      </probability-density-function>
+    </delay>
+  </airborne-spread-exponential-model>
+
+
+  <airborne-spread-exponential-model from-production-type = "broilers" to-production-type = "turkeys">
+    <prob-spread-1km>0.5</prob-spread-1km>
+    <wind-direction-start>
+      <value>0</value>
+      <units><xdf:unit>degree</xdf:unit></units>
+    </wind-direction-start>
+    <wind-direction-end>
+      <value>360</value>
+      <units><xdf:unit>degree</xdf:unit></units>
+    </wind-direction-end>
+    <delay>
+      <probability-density-function name="Default airborne transport delay">
+        <point>
+          0
+        </point>
+        <units><xdf:unit>day</xdf:unit></units>
+      </probability-density-function>
+    </delay>
+  </airborne-spread-exponential-model>
+
+
+  <airborne-spread-exponential-model from-production-type = "layers" to-production-type = "backyard">
+    <prob-spread-1km>0.5</prob-spread-1km>
+    <wind-direction-start>
+      <value>0</value>
+      <units><xdf:unit>degree</xdf:unit></units>
+    </wind-direction-start>
+    <wind-direction-end>
+      <value>360</value>
+      <units><xdf:unit>degree</xdf:unit></units>
+    </wind-direction-end>
+    <delay>
+      <probability-density-function name="Default airborne transport delay">
+        <point>
+          0
+        </point>
+        <units><xdf:unit>day</xdf:unit></units>
+      </probability-density-function>
+    </delay>
+  </airborne-spread-exponential-model>
+
+
+  <airborne-spread-exponential-model from-production-type = "layers" to-production-type = "broilers">
+    <prob-spread-1km>0.5</prob-spread-1km>
+    <wind-direction-start>
+      <value>0</value>
+      <units><xdf:unit>degree</xdf:unit></units>
+    </wind-direction-start>
+    <wind-direction-end>
+      <value>360</value>
+      <units><xdf:unit>degree</xdf:unit></units>
+    </wind-direction-end>
+    <delay>
+      <probability-density-function name="Default airborne transport delay">
+        <point>
+          0
+        </point>
+        <units><xdf:unit>day</xdf:unit></units>
+      </probability-density-function>
+    </delay>
+  </airborne-spread-exponential-model>
+
+
+  <airborne-spread-exponential-model from-production-type = "layers" to-production-type = "layers">
+    <prob-spread-1km>0.5</prob-spread-1km>
+    <wind-direction-start>
+      <value>0</value>
+      <units><xdf:unit>degree</xdf:unit></units>
+    </wind-direction-start>
+    <wind-direction-end>
+      <value>360</value>
+      <units><xdf:unit>degree</xdf:unit></units>
+    </wind-direction-end>
+    <delay>
+      <probability-density-function name="Default airborne transport delay">
+        <point>
+          0
+        </point>
+        <units><xdf:unit>day</xdf:unit></units>
+      </probability-density-function>
+    </delay>
+  </airborne-spread-exponential-model>
+
+
+  <airborne-spread-exponential-model from-production-type = "layers" to-production-type = "turkeys">
+    <prob-spread-1km>0.5</prob-spread-1km>
+    <wind-direction-start>
+      <value>0</value>
+      <units><xdf:unit>degree</xdf:unit></units>
+    </wind-direction-start>
+    <wind-direction-end>
+      <value>360</value>
+      <units><xdf:unit>degree</xdf:unit></units>
+    </wind-direction-end>
+    <delay>
+      <probability-density-function name="Default airborne transport delay">
+        <point>
+          0
+        </point>
+        <units><xdf:unit>day</xdf:unit></units>
+      </probability-density-function>
+    </delay>
+  </airborne-spread-exponential-model>
+
+
+  <airborne-spread-exponential-model from-production-type = "turkeys" to-production-type = "backyard">
+    <prob-spread-1km>0.5</prob-spread-1km>
+    <wind-direction-start>
+      <value>0</value>
+      <units><xdf:unit>degree</xdf:unit></units>
+    </wind-direction-start>
+    <wind-direction-end>
+      <value>360</value>
+      <units><xdf:unit>degree</xdf:unit></units>
+    </wind-direction-end>
+    <delay>
+      <probability-density-function name="Default airborne transport delay">
+        <point>
+          0
+        </point>
+        <units><xdf:unit>day</xdf:unit></units>
+      </probability-density-function>
+    </delay>
+  </airborne-spread-exponential-model>
+
+
+  <airborne-spread-exponential-model from-production-type = "turkeys" to-production-type = "broilers">
+    <prob-spread-1km>0.5</prob-spread-1km>
+    <wind-direction-start>
+      <value>0</value>
+      <units><xdf:unit>degree</xdf:unit></units>
+    </wind-direction-start>
+    <wind-direction-end>
+      <value>360</value>
+      <units><xdf:unit>degree</xdf:unit></units>
+    </wind-direction-end>
+    <delay>
+      <probability-density-function name="Default airborne transport delay">
+        <point>
+          0
+        </point>
+        <units><xdf:unit>day</xdf:unit></units>
+      </probability-density-function>
+    </delay>
+  </airborne-spread-exponential-model>
+
+
+  <airborne-spread-exponential-model from-production-type = "turkeys" to-production-type = "layers">
+    <prob-spread-1km>0.5</prob-spread-1km>
+    <wind-direction-start>
+      <value>0</value>
+      <units><xdf:unit>degree</xdf:unit></units>
+    </wind-direction-start>
+    <wind-direction-end>
+      <value>360</value>
+      <units><xdf:unit>degree</xdf:unit></units>
+    </wind-direction-end>
+    <delay>
+      <probability-density-function name="Default airborne transport delay">
+        <point>
+          0
+        </point>
+        <units><xdf:unit>day</xdf:unit></units>
+      </probability-density-function>
+    </delay>
+  </airborne-spread-exponential-model>
+
+
+  <airborne-spread-exponential-model from-production-type = "turkeys" to-production-type = "turkeys">
+    <prob-spread-1km>0.5</prob-spread-1km>
+    <wind-direction-start>
+      <value>0</value>
+      <units><xdf:unit>degree</xdf:unit></units>
+    </wind-direction-start>
+    <wind-direction-end>
+      <value>360</value>
+      <units><xdf:unit>degree</xdf:unit></units>
+    </wind-direction-end>
+    <delay>
+      <probability-density-function name="Default airborne transport delay">
+        <point>
+          0
+        </point>
+        <units><xdf:unit>day</xdf:unit></units>
+      </probability-density-function>
+    </delay>
+  </airborne-spread-exponential-model>
+
+
+  <infection-monitor>
+    <ratio-period>
+      <value>1</value>
+      <units><xdf:unit>day</xdf:unit></units>
+    </ratio-period>
+  </infection-monitor>
+
+  <exposure-monitor></exposure-monitor>
+
+  <resources-and-implementation-of-controls-model>
+    <!-- This scenario does not actually use destruction! -->
+    <!-- This block must be written, however, to keep the core library happy. -->
+    <destruction-program-delay>
+      <value>0</value>
+      <units><xdf:unit>day</xdf:unit></units>
+    </destruction-program-delay>
+    <destruction-capacity>
+      <relational-function name="Default Destruction Capacity">
+        <value><x>1</x>             <y>0</y></value>
+        <x-units><xdf:unit>day</xdf:unit></x-units>
+        <y-units><xdf:unit>herd</xdf:unit><xdf:unit power="-1">day</xdf:unit></y-units>
+      </relational-function>
+    </destruction-capacity>
+    <destruction-priority-order>
+      reason,production type,time waiting
+    </destruction-priority-order>
+    <!-- This scenario does not actually use vaccination! -->
+    <!-- This block must be written, however, to keep the core library happy. -->
+    <vaccination-capacity>
+      <relational-function name="Default Vaccination Capacity">
+        <value><x>1</x>             <y>0</y></value>
+        <x-units><xdf:unit>day</xdf:unit></x-units>
+        <y-units><xdf:unit>herd</xdf:unit><xdf:unit power="-1">day</xdf:unit></y-units>
+      </relational-function>
+    </vaccination-capacity>
+    <vaccination-priority-order>
+      reason,production type,time waiting
+    </vaccination-priority-order>
+    <vaccination-program-delay>
+      1
+    </vaccination-program-delay>
+  </resources-and-implementation-of-controls-model>
+
+
+  <quarantine-model></quarantine-model>
+
+
+  <detection-model production-type="backyard" production-type-id="1">
+    <prob-report-vs-time-clinical>
+      <relational-function name="Observing clinical signs in backyard flocks">
+        <value><x>0</x>             <y>0.0001</y></value>
+        <value><x>3</x>             <y>0.002</y></value>
+        <value><x>5</x>             <y>0.006</y></value>
+        <value><x>7</x>             <y>0.0065</y></value>
+        <value><x>8</x>             <y>0.007</y></value>
+        <value><x>9</x>             <y>0.0075</y></value>
+        <value><x>10</x>            <y>0.008</y></value>
+        <x-units><xdf:unit>day</xdf:unit></x-units>
+        <y-units><xdf:unit>probability</xdf:unit></y-units>
+      </relational-function>
+    </prob-report-vs-time-clinical>
+    <prob-report-vs-time-since-outbreak>
+      <relational-function name="Reporting backyards">
+        <value><x>0</x>             <y>0.0001</y></value>
+        <value><x>7</x>             <y>0.009</y></value>
+        <value><x>10</x>            <y>0.009</y></value>
+        <x-units><xdf:unit>day</xdf:unit></x-units>
+        <y-units><xdf:unit>probability</xdf:unit></y-units>
+      </relational-function>
+    </prob-report-vs-time-since-outbreak>
+  </detection-model>
+
+  <detection-model production-type="broilers" production-type-id="2">
+    <prob-report-vs-time-clinical>
+      <relational-function name="Observing clinical signs in commercial flocks">
+        <value><x>0</x>             <y>0.003</y></value>
+        <value><x>3</x>             <y>0.008</y></value>
+        <value><x>5</x>             <y>0.009</y></value>
+        <value><x>7</x>             <y>0.0095</y></value>
+        <value><x>10</x>            <y>0.01</y></value>
+        <x-units><xdf:unit>day</xdf:unit></x-units>
+        <y-units><xdf:unit>probability</xdf:unit></y-units>
+      </relational-function>
+    </prob-report-vs-time-clinical>
+    <prob-report-vs-time-since-outbreak>
+      <relational-function name="Reporting Commercial">
+        <value><x>0</x>             <y>0.004</y></value>
+        <value><x>2</x>             <y>0.007</y></value>
+        <value><x>10</x>            <y>0.01</y></value>
+        <x-units><xdf:unit>day</xdf:unit></x-units>
+        <y-units><xdf:unit>probability</xdf:unit></y-units>
+      </relational-function>
+    </prob-report-vs-time-since-outbreak>
+  </detection-model>
+
+  <detection-model production-type="layers" production-type-id="3">
+    <prob-report-vs-time-clinical>
+      <relational-function name="Observing clinical signs in commercial flocks">
+        <value><x>0</x>             <y>0.003</y></value>
+        <value><x>3</x>             <y>0.008</y></value>
+        <value><x>5</x>             <y>0.009</y></value>
+        <value><x>7</x>             <y>0.0095</y></value>
+        <value><x>10</x>            <y>0.01</y></value>
+        <x-units><xdf:unit>day</xdf:unit></x-units>
+        <y-units><xdf:unit>probability</xdf:unit></y-units>
+      </relational-function>
+    </prob-report-vs-time-clinical>
+    <prob-report-vs-time-since-outbreak>
+      <relational-function name="Reporting Commercial">
+        <value><x>0</x>             <y>0.004</y></value>
+        <value><x>2</x>             <y>0.007</y></value>
+        <value><x>10</x>            <y>0.01</y></value>
+        <x-units><xdf:unit>day</xdf:unit></x-units>
+        <y-units><xdf:unit>probability</xdf:unit></y-units>
+      </relational-function>
+    </prob-report-vs-time-since-outbreak>
+  </detection-model>
+
+  <detection-model production-type="turkeys" production-type-id="4">
+    <prob-report-vs-time-clinical>
+      <relational-function name="Observing clinical signs in commercial flocks">
+        <value><x>0</x>             <y>0.003</y></value>
+        <value><x>3</x>             <y>0.008</y></value>
+        <value><x>5</x>             <y>0.009</y></value>
+        <value><x>7</x>             <y>0.0095</y></value>
+        <value><x>10</x>            <y>0.01</y></value>
+        <x-units><xdf:unit>day</xdf:unit></x-units>
+        <y-units><xdf:unit>probability</xdf:unit></y-units>
+      </relational-function>
+    </prob-report-vs-time-clinical>
+    <prob-report-vs-time-since-outbreak>
+      <relational-function name="Reporting Commercial">
+        <value><x>0</x>             <y>0.004</y></value>
+        <value><x>2</x>             <y>0.007</y></value>
+        <value><x>10</x>            <y>0.01</y></value>
+        <x-units><xdf:unit>day</xdf:unit></x-units>
+        <y-units><xdf:unit>probability</xdf:unit></y-units>
+      </relational-function>
+    </prob-report-vs-time-since-outbreak>
+  </detection-model>
+
+
+  <detection-monitor></detection-monitor>
+
+  <trace-model production-type="backyard" production-type-id="1" contact-type="direct" direction="out">
+    <trace-period>
+      <value>21</value>
+      <units><xdf:unit>day</xdf:unit></units>
+    </trace-period>
+  </trace-model>
+
+  <trace-quarantine-model production-type="backyard" production-type-id="1" contact-type="direct" direction="out"></trace-quarantine-model>
+
+  <trace-model production-type="backyard" production-type-id="1" contact-type="indirect" direction="out">
+    <trace-period>
+      <value>21</value>
+      <units><xdf:unit>day</xdf:unit></units>
+    </trace-period>
+  </trace-model>
+
+  <trace-quarantine-model production-type="backyard" production-type-id="1" contact-type="indirect" direction="out"></trace-quarantine-model>
+
+  <trace-model production-type="broilers" production-type-id="2" contact-type="direct" direction="out">
+    <trace-period>
+      <value>21</value>
+      <units><xdf:unit>day</xdf:unit></units>
+    </trace-period>
+  </trace-model>
+
+  <trace-quarantine-model production-type="broilers" production-type-id="2" contact-type="direct" direction="out"></trace-quarantine-model>
+
+  <trace-model production-type="broilers" production-type-id="2" contact-type="indirect" direction="out">
+    <trace-period>
+      <value>21</value>
+      <units><xdf:unit>day</xdf:unit></units>
+    </trace-period>
+  </trace-model>
+
+  <trace-quarantine-model production-type="broilers" production-type-id="2" contact-type="indirect" direction="out"></trace-quarantine-model>
+
+  <trace-model production-type="layers" production-type-id="3" contact-type="direct" direction="out">
+    <trace-period>
+      <value>21</value>
+      <units><xdf:unit>day</xdf:unit></units>
+    </trace-period>
+  </trace-model>
+
+  <trace-quarantine-model production-type="layers" production-type-id="3" contact-type="direct" direction="out"></trace-quarantine-model>
+
+  <trace-model production-type="layers" production-type-id="3" contact-type="indirect" direction="out">
+    <trace-period>
+      <value>21</value>
+      <units><xdf:unit>day</xdf:unit></units>
+    </trace-period>
+  </trace-model>
+
+  <trace-quarantine-model production-type="layers" production-type-id="3" contact-type="indirect" direction="out"></trace-quarantine-model>
+
+  <trace-model production-type="turkeys" production-type-id="4" contact-type="direct" direction="out">
+    <trace-period>
+      <value>21</value>
+      <units><xdf:unit>day</xdf:unit></units>
+    </trace-period>
+  </trace-model>
+
+  <trace-quarantine-model production-type="turkeys" production-type-id="4" contact-type="direct" direction="out"></trace-quarantine-model>
+
+  <trace-model production-type="turkeys" production-type-id="4" contact-type="indirect" direction="out">
+    <trace-period>
+      <value>21</value>
+      <units><xdf:unit>day</xdf:unit></units>
+    </trace-period>
+  </trace-model>
+
+  <trace-quarantine-model production-type="turkeys" production-type-id="4" contact-type="indirect" direction="out"></trace-quarantine-model>
+
+  <contact-recorder-model production-type="backyard" production-type-id="1" contact-type="direct">
+    <trace-period>
+      <value>21</value>
+      <units><xdf:unit>day</xdf:unit></units>
+    </trace-period>
+    <trace-success>0.25</trace-success>
+    <trace-delay>
+      <probability-density-function name="Default for tracing delay">
+        <point>
+          0
+        </point>
+        <units><xdf:unit>day</xdf:unit></units>
+      </probability-density-function>
+    </trace-delay>
+  </contact-recorder-model>
+
+  <contact-recorder-model production-type="backyard" production-type-id="1" contact-type="indirect">
+    <trace-period>
+      <value>21</value>
+      <units><xdf:unit>day</xdf:unit></units>
+    </trace-period>
+    <trace-success>0.1</trace-success>
+    <trace-delay>
+      <probability-density-function name="Default for tracing delay">
+        <point>
+          0
+        </point>
+        <units><xdf:unit>day</xdf:unit></units>
+      </probability-density-function>
+    </trace-delay>
+  </contact-recorder-model>
+
+  <contact-recorder-model production-type="broilers" production-type-id="2" contact-type="direct">
+    <trace-period>
+      <value>21</value>
+      <units><xdf:unit>day</xdf:unit></units>
+    </trace-period>
+    <trace-success>0.99</trace-success>
+    <trace-delay>
+      <probability-density-function name="Default for tracing delay">
+        <point>
+          0
+        </point>
+        <units><xdf:unit>day</xdf:unit></units>
+      </probability-density-function>
+    </trace-delay>
+  </contact-recorder-model>
+
+  <contact-recorder-model production-type="broilers" production-type-id="2" contact-type="indirect">
+    <trace-period>
+      <value>21</value>
+      <units><xdf:unit>day</xdf:unit></units>
+    </trace-period>
+    <trace-success>0.8</trace-success>
+    <trace-delay>
+      <probability-density-function name="Default for tracing delay">
+        <point>
+          0
+        </point>
+        <units><xdf:unit>day</xdf:unit></units>
+      </probability-density-function>
+    </trace-delay>
+  </contact-recorder-model>
+
+  <contact-recorder-model production-type="layers" production-type-id="3" contact-type="direct">
+    <trace-period>
+      <value>21</value>
+      <units><xdf:unit>day</xdf:unit></units>
+    </trace-period>
+    <trace-success>0.99</trace-success>
+    <trace-delay>
+      <probability-density-function name="Default for tracing delay">
+        <point>
+          0
+        </point>
+        <units><xdf:unit>day</xdf:unit></units>
+      </probability-density-function>
+    </trace-delay>
+  </contact-recorder-model>
+
+  <contact-recorder-model production-type="layers" production-type-id="3" contact-type="indirect">
+    <trace-period>
+      <value>21</value>
+      <units><xdf:unit>day</xdf:unit></units>
+    </trace-period>
+    <trace-success>0.8</trace-success>
+    <trace-delay>
+      <probability-density-function name="Default for tracing delay">
+        <point>
+          0
+        </point>
+        <units><xdf:unit>day</xdf:unit></units>
+      </probability-density-function>
+    </trace-delay>
+  </contact-recorder-model>
+
+  <contact-recorder-model production-type="turkeys" production-type-id="4" contact-type="direct">
+    <trace-period>
+      <value>21</value>
+      <units><xdf:unit>day</xdf:unit></units>
+    </trace-period>
+    <trace-success>0.99</trace-success>
+    <trace-delay>
+      <probability-density-function name="Default for tracing delay">
+        <point>
+          0
+        </point>
+        <units><xdf:unit>day</xdf:unit></units>
+      </probability-density-function>
+    </trace-delay>
+  </contact-recorder-model>
+
+  <contact-recorder-model production-type="turkeys" production-type-id="4" contact-type="indirect">
+    <trace-period>
+      <value>21</value>
+      <units><xdf:unit>day</xdf:unit></units>
+    </trace-period>
+    <trace-success>0.8</trace-success>
+    <trace-delay>
+      <probability-density-function name="Default for tracing delay">
+        <point>
+          0
+        </point>
+        <units><xdf:unit>day</xdf:unit></units>
+      </probability-density-function>
+    </trace-delay>
+  </contact-recorder-model>
+
+  <trace-monitor></trace-monitor>
+
+  <destruction-monitor></destruction-monitor>
+
+  <destruction-list-monitor></destruction-list-monitor>
+
+ <vaccination-monitor></vaccination-monitor>
+
+  <vaccination-list-monitor></vaccination-list-monitor>
+
+  <conflict-resolver></conflict-resolver>
+
+</models>
+
+<output>
+  <variable-name>all-units-states</variable-name>
+  <frequency>daily</frequency>
+</output>
+
+</naadsm:disease-simulation>
+

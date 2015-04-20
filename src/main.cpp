@@ -6,6 +6,7 @@
 #include "scenario.hpp"
 #include "hdf_file.hpp"
 #include "ensemble.hpp"
+#include "naadsm_xml.hpp"
 #include "contact_version.hpp"
 
 
@@ -95,7 +96,8 @@ int main(int argc, char *argv[]) {
   std::string data_file("sirexp.h5");
   bool save_file=false;
   std::string translation_file;
-  bool test=false;
+  std::string input_xml;
+  bool test=true;
 
   desc.add_options()
     ("help", "show help message")
@@ -126,6 +128,9 @@ int main(int argc, char *argv[]) {
     ("exactinfect",
       po::value<bool>(&exactinfect)->default_value(exactinfect),
       "set true to use exact distribution for seasonal infection")
+    ("xmlinput",
+      po::value<std::string>(&input_xml),
+      "An XML file with NAADSM configuration.")
     ("datafile",
       po::value<std::string>(&data_file)->default_value(data_file),
       "Write to this data file.")
@@ -169,6 +174,9 @@ int main(int argc, char *argv[]) {
   afidd::LogInit(log_level);
 
   if (test) {
+    if (vm.count("xmlinput")) {
+      load_xml(input_xml);
+    }
   }
 
   std::map<ADParam,double*> params;
