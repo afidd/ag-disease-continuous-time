@@ -175,7 +175,7 @@ int main(int argc, char *argv[]) {
 
   if (test) {
     if (vm.count("xmlinput")) {
-      load_xml(input_xml);
+      load_naadsm(input_xml);
     }
   }
 
