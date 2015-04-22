@@ -194,8 +194,8 @@ int main(int argc, char *argv[]) {
     return -4;
   }
 
-  if (vm.count("infected") and !vm.count("recovered") ||
-      !vm.count("infected") and vm.count("recovered")) {
+  if ((vm.count("infected") && !vm.count("recovered")) ||
+      (!vm.count("infected") && vm.count("recovered"))) {
     std::cout << "You have so set the total and I and R, not just some of them."
       << std::endl;
     return -3;

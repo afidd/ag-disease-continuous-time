@@ -27,6 +27,7 @@ herr_t IterateTrajectories(hid_t group_id, const char* group_name,
       *chosen_idx=std::max(*chosen_idx, 1);
     }
   }
+  return herr_t{0};
 }
 
 

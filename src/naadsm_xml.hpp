@@ -64,7 +64,7 @@ void load_disease_model(pt::ptree& tree) {
   auto im_dist=load_disease_pdf(tree.get_child("immunity-period"));
 }
 
-void load_spread_model(pt::ptree& tree) {
+void load_airborne_spread(pt::ptree& tree) {
 
 }
 
