@@ -9,6 +9,7 @@
 #include "smv.hpp"
 namespace pt = boost::property_tree;
 
+std::string DiseaseModel::production_type() const { return name_; }
 
 void DiseaseModel::load_disease_model(pt::ptree& tree) {
   auto attr=tree.get_child("<xmlattr>");
@@ -64,12 +65,47 @@ DiseaseModel::load_disease_pdf(pt::ptree& tree) {
 
 AirborneSpread::AirborneSpread(std::string source) : source_(source) {}
 
+double AirborneSpread::hazard_per_day(const std::string& target, double dx) {
+  return std::exp(-probability1km_.at(target)*dx);
+}
+
 void AirborneSpread::load_target(std::string target, pt::ptree& tree) {
   double p=tree.get<double>("prob-spread-1km");
-  probability1km_[target]=p;
+  probability1km_[target]=-std::log(p);
   assert(tree.get<int>("wind-direction-start.value")==0);
   assert(tree.get<int>("wind-direction-end.value")==360);
   assert(tree.get<int>("delay.probability-density-function.point")==0);
+}
+
+
+void Herds::load(const std::string& filename) {
+  std::ifstream input_file_stream;
+  input_file_stream.open(filename);
+  if (!input_file_stream.is_open()) {
+    BOOST_LOG_TRIVIAL(error)<<"Cannot open file "<<filename;
+    return;
+  }
+  input_file_stream.imbue(std::locale("en_US.UTF-8"));
+
+  pt::ptree tree;
+  pt::read_xml(input_file_stream, tree);
+  auto& herds=tree.get_child("herds");
+  for (pt::ptree::value_type& v: herds) {
+    if (v.first.compare("herd")==0) {
+      state_.emplace_back(
+        v.second.get<int>("id"),
+        v.second.get<std::string>("production-type"),
+        v.second.get<int>("size"),
+        std::make_pair(v.second.get<double>("location.latitude"),
+                       v.second.get<double>("location.longitude")),
+        v.second.get<std::string>("status")
+        );
+    } else if (v.first.compare("<xmlattr>")==0) {
+      ; // also good
+    } else {
+      BOOST_LOG_TRIVIAL(warning) << "Unknown tag for herds " << v.first;
+    }
+  }
 }
 
 
@@ -83,7 +119,7 @@ void load_naadsm(const std::string& filename) {
   }
   input_file_stream.imbue(std::locale("en_US.UTF-8"));
 
-  std::vector<DiseaseModel> disease_model;
+  std::map<std::string,DiseaseModel> disease_model;
   std::map<std::string,AirborneSpread> airborne_spread;
 
   pt::ptree tree;
@@ -91,8 +127,9 @@ void load_naadsm(const std::string& filename) {
   auto models=tree.get_child("naadsm:disease-simulation.models");
   for (pt::ptree::value_type& v: models) {
     if (v.first.compare("disease-model")==0) {
-      disease_model.push_back(DiseaseModel());
-      disease_model[disease_model.size()-1].load_disease_model(v.second);
+      DiseaseModel flock_type;
+      flock_type.load_disease_model(v.second);
+      disease_model[flock_type.production_type()]=flock_type;
     } else if (v.first.compare("airborne-spread-exponential-model")==0) {
       auto attr=v.second.get_child("<xmlattr>");
       auto from=attr.get<std::string>("from-production-type");

@@ -22,6 +22,7 @@ class DiseaseModel {
   int id_;
  public:
   DiseaseModel()=default;
+  std::string production_type() const;
 
   void load_disease_model(boost::property_tree::ptree& tree);
  private:
@@ -35,8 +36,28 @@ class AirborneSpread {
  public:
   AirborneSpread()=default;
   AirborneSpread(std::string source);
+  double hazard_per_day(const std::string& target, double distance);
 
   void load_target(std::string target, boost::property_tree::ptree& tree);
+};
+
+struct Herd {
+  int id;
+  std::string production_type;
+  int size;
+  std::pair<double,double> latlong;
+  std::string status;
+  Herd()=default;
+  Herd(int id, std::string prod, int s, std::pair<double,double> l,
+    std::string status) : id(id), production_type(prod), size(s),
+    latlong(l), status(status) {}
+};
+
+class Herds {
+  std::vector<Herd> state_;
+ public:
+  Herds()=default;
+  void load(const std::string& filename);
 };
 
 
