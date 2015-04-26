@@ -130,8 +130,19 @@ void Herds::load(const std::string& filename) {
   }
 }
 
+int64_t Herds::size() const { return state_.size(); }
 
-void load_naadsm(const std::string& filename) {
+
+void NAADSMScenario::load(const std::string& scenario,
+    const std::string& herd) {
+  load_scenario(scenario);
+  herds_.load(herd);
+}
+
+int64_t NAADSMScenario::herd_cnt() const { return herds_.size(); }
+
+
+void NAADSMScenario::load_scenario(const std::string& filename) {
   // Load the file respecting UTF-8 locale.
   std::ifstream input_file_stream;
   input_file_stream.open(filename);
@@ -141,9 +152,6 @@ void load_naadsm(const std::string& filename) {
   }
   input_file_stream.imbue(std::locale("en_US.UTF-8"));
 
-  std::map<std::string,DiseaseModel> disease_model;
-  std::map<std::string,AirborneSpread> airborne_spread;
-
   pt::ptree tree;
   pt::read_xml(input_file_stream, tree);
   auto models=tree.get_child("naadsm:disease-simulation.models");
@@ -151,16 +159,29 @@ void load_naadsm(const std::string& filename) {
     if (v.first.compare("disease-model")==0) {
       DiseaseModel flock_type;
       flock_type.load_disease_model(v.second);
-      disease_model[flock_type.production_type()]=flock_type;
+      disease_model_[flock_type.production_type()]=flock_type;
     } else if (v.first.compare("airborne-spread-exponential-model")==0) {
       auto attr=v.second.get_child("<xmlattr>");
       auto from=attr.get<std::string>("from-production-type");
       auto whom=attr.get<std::string>("to-production-type");
-      if (airborne_spread.find(from)==airborne_spread.end()) {
-        airborne_spread.emplace(from, from);
+      if (airborne_spread_.find(from)==airborne_spread_.end()) {
+        airborne_spread_.emplace(from, from);
       }
-      airborne_spread[from].load_target(whom, v.second);
+      airborne_spread_[from].load_target(whom, v.second);
     }
   }
+}
+
+
+std::vector<std::array<double,2>>& NAADSMScenario::GetLocations() const {
+  std::vector<std::array<double,2>> locations;
+  for (const Herd& h : herds_.state_) {
+    locations.push_back({h.latlong.first, h.latlong.second});
+  }
+}
+
+
+double NAADSMScenario::airborne_hazard(int64_t source, int64_t target) const {
+  return 3.0;
 }
 

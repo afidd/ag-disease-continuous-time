@@ -66,9 +66,9 @@ class PercentTrajectorySave : public TrajectoryObserver
 int main(int argc, char *argv[]) {
   namespace po=boost::program_options;
   po::options_description desc("Well-mixed SIR with demographics.");
-  int64_t individual_cnt=100000;
-  int64_t infected_cnt=individual_cnt*0.1;
-  int64_t recovered_cnt=individual_cnt*0.8;
+  int64_t individual_cnt=100;
+  int64_t infected_cnt=1;
+  int64_t recovered_cnt=0;
 
   int run_cnt=1;
   size_t rand_seed=1;
@@ -96,7 +96,8 @@ int main(int argc, char *argv[]) {
   std::string data_file("sirexp.h5");
   bool save_file=false;
   std::string translation_file;
-  std::string input_xml;
+  std::string scenario_file;
+  std::string herd_file;
   bool test=true;
 
   desc.add_options()
@@ -107,15 +108,9 @@ int main(int argc, char *argv[]) {
     ("runcnt",
       po::value<int>(&run_cnt)->default_value(run_cnt),
       "number of runs")
-    ("size,s",
+    ("size",
       po::value<int64_t>(&individual_cnt)->default_value(individual_cnt),
       "size of the population")
-    ("infected,i",
-      po::value<int64_t>(&infected_cnt),
-      "number of infected")
-    ("recovered,r",
-      po::value<int64_t>(&recovered_cnt),
-      "number of recovered")
     ("seed",
       po::value<size_t>(&rand_seed)->default_value(rand_seed),
       "seed for random number generator")
@@ -128,9 +123,12 @@ int main(int argc, char *argv[]) {
     ("exactinfect",
       po::value<bool>(&exactinfect)->default_value(exactinfect),
       "set true to use exact distribution for seasonal infection")
-    ("xmlinput",
-      po::value<std::string>(&input_xml),
-      "An XML file with NAADSM configuration.")
+    ("scenario,s",
+      po::value<std::string>(&scenario_file),
+      "A NAADSM scenario file")
+    ("herd,h",
+      po::value<std::string>(&herd_file),
+      "A NAADSM XML herd file.")
     ("datafile",
       po::value<std::string>(&data_file)->default_value(data_file),
       "Write to this data file.")
@@ -174,9 +172,6 @@ int main(int argc, char *argv[]) {
   afidd::LogInit(log_level);
 
   if (test) {
-    if (vm.count("xmlinput")) {
-      load_naadsm(input_xml);
-    }
   }
 
   std::map<ADParam,double*> params;
@@ -231,7 +226,10 @@ int main(int argc, char *argv[]) {
   }
   file.WriteExecutableData(compile_info, parsed_options, sir_init);
   RandGen rng2(rand_seed+1);
-  Scenario<RandGen> scenario(individual_cnt, rng2);
+
+  NAADSMScenario scenario;
+  scenario.load(scenario_file, herd_file);
+
   auto& locations=scenario.GetLocations();
   BOOST_LOG_TRIVIAL(debug)<<"locations";
   for ( auto l : locations) {

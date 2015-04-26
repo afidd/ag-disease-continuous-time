@@ -171,7 +171,7 @@ using SIRGSPN=
 
 
 SIRGSPN
-BuildSystem(Scenario<RandGen>& scenario) {
+BuildSystem(NAADSMScenario& scenario) {
   int64_t herd_cnt=scenario.herd_cnt();
   BuildGraph<SIRGSPN> bg;
   using Edge=BuildGraph<SIRGSPN>::PlaceEdge;
@@ -257,7 +257,7 @@ struct SIROutput {
 
 
 int64_t SIR_run(double end_time, const std::vector<Parameter>& parameters,
-    Scenario<RandGen>& scenario, std::shared_ptr<TrajectoryObserver> observer,
+    NAADSMScenario& scenario, std::shared_ptr<TrajectoryObserver> observer,
     RandGen& rng)
 {
   int64_t herd_cnt=scenario.herd_cnt();

@@ -3,7 +3,7 @@
 #include <map>
 #include <random>
 #include "boost/random/mersenne_twister.hpp"
-#include "scenario.hpp"
+#include "naadsm_xml.hpp"
 //#include "mt19937.hpp"
 
 //using RandGen=afidd::rng::mt19937;
@@ -43,7 +43,7 @@ public:
 
 
 int64_t SIR_run(double time_limit,const std::vector<Parameter>& parameters,
-  Scenario<RandGen>& scenario, std::shared_ptr<TrajectoryObserver> observer,
+  NAADSMScenario& scenario, std::shared_ptr<TrajectoryObserver> observer,
   RandGen& rng);
 
 #endif

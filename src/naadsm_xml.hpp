@@ -55,14 +55,26 @@ struct Herd {
 };
 
 class Herds {
-  std::vector<Herd> state_;
  public:
+  std::vector<Herd> state_;
   Herds()=default;
   void load(const std::string& filename);
+  int64_t size() const;
 };
 
 
-void load_naadsm(const std::string& filename);
+class NAADSMScenario {
+  std::map<std::string,DiseaseModel> disease_model_;
+  std::map<std::string,AirborneSpread> airborne_spread_;
+  Herds herds_;
+ public:
+  void load(const std::string& scenario, const std::string& herd);
+  int64_t herd_cnt() const;
+  std::vector<std::array<double,2>>& GetLocations() const;
+  double airborne_hazard(int64_t source, int64_t target) const;
+ private:
+  void load_scenario(const std::string& filename);
+};
 
 
 // _NAADSM_XML_H_
