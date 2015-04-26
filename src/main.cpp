@@ -230,7 +230,7 @@ int main(int argc, char *argv[]) {
   NAADSMScenario scenario;
   scenario.load(scenario_file, herd_file);
 
-  auto& locations=scenario.GetLocations();
+  auto locations=scenario.GetLocations();
   BOOST_LOG_TRIVIAL(debug)<<"locations";
   for ( auto l : locations) {
     double x=std::get<0>(l);

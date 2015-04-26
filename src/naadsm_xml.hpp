@@ -36,7 +36,7 @@ class AirborneSpread {
  public:
   AirborneSpread()=default;
   AirborneSpread(std::string source);
-  double hazard_per_day(const std::string& target, double distance);
+  double hazard_per_day(const std::string& target, double distance) const;
 
   void load_target(std::string target, boost::property_tree::ptree& tree);
 };
@@ -70,7 +70,7 @@ class NAADSMScenario {
  public:
   void load(const std::string& scenario, const std::string& herd);
   int64_t herd_cnt() const;
-  std::vector<std::array<double,2>>& GetLocations() const;
+  std::vector<std::array<double,2>> GetLocations() const;
   double airborne_hazard(int64_t source, int64_t target) const;
  private:
   void load_scenario(const std::string& filename);

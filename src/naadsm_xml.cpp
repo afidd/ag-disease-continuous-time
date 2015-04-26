@@ -65,7 +65,8 @@ DiseaseModel::load_disease_pdf(pt::ptree& tree) {
 
 AirborneSpread::AirborneSpread(std::string source) : source_(source) {}
 
-double AirborneSpread::hazard_per_day(const std::string& target, double dx) {
+double AirborneSpread::hazard_per_day(
+    const std::string& target, double dx) const {
   return std::exp(-probability1km_.at(target)*dx);
 }
 
@@ -173,15 +174,25 @@ void NAADSMScenario::load_scenario(const std::string& filename) {
 }
 
 
-std::vector<std::array<double,2>>& NAADSMScenario::GetLocations() const {
+std::vector<std::array<double,2>> NAADSMScenario::GetLocations() const {
   std::vector<std::array<double,2>> locations;
   for (const Herd& h : herds_.state_) {
     locations.push_back({h.latlong.first, h.latlong.second});
   }
+  return locations;
 }
 
 
 double NAADSMScenario::airborne_hazard(int64_t source, int64_t target) const {
-  return 3.0;
+  const auto& source_prod=herds_.state_[source].production_type;
+  const std::pair<double,double>& source_loc=herds_.state_[source].latlong;
+  const auto& target_prod=herds_.state_[source].production_type;
+  const std::pair<double,double>& target_loc=herds_.state_[source].latlong;
+
+  double distance=::distancekm(source_loc.first, source_loc.second,
+    target_loc.first, target_loc.second);
+  return airborne_spread_.at(source_prod).hazard_per_day(
+    target_prod, distance);
 }
+
 

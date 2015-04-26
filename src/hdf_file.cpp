@@ -337,4 +337,5 @@ HDFFile::HDFFile(const HDFFile& o)
 : pimpl(o.pimpl) {}
 HDFFile& HDFFile::operator=(const HDFFile& o) {
   pimpl=o.pimpl;
+  return *this;
 }
