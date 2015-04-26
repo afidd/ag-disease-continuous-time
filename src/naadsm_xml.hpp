@@ -51,6 +51,7 @@ struct Herd {
   Herd(int id, std::string prod, int s, std::pair<double,double> l,
     std::string status) : id(id), production_type(prod), size(s),
     latlong(l), status(status) {}
+  double distancekm(const Herd& b) const;
 };
 
 class Herds {

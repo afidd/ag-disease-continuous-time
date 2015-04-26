@@ -78,6 +78,28 @@ void AirborneSpread::load_target(std::string target, pt::ptree& tree) {
 }
 
 
+/*! Distance computed on a spherical earth.
+ *  Taken from http://williams.best.vwh.net/avform.htm.
+ */
+double distancekm(double lat1, double lon1, double lat2, double lon2) {
+  constexpr double degrees_to_radians=boost::math::constants::pi<double>()/180;
+  constexpr double radians_km=180*60*1.852/boost::math::constants::pi<double>();
+  lat1=lat1*degrees_to_radians;
+  lon1=lon1*degrees_to_radians;
+  lat2=lat2*degrees_to_radians;
+  lon2=lon2*degrees_to_radians;
+  double d=2*std::asin(std::sqrt(std::pow(std::sin((lat1-lat2)/2), 2) + 
+    std::cos(lat1)*std::cos(lat2)*std::pow(std::sin((lon1-lon2)/2), 2)));
+  return d*radians_km;
+}
+
+
+double Herd::distancekm(const Herd& b) const {
+  return ::distancekm(latlong.first, latlong.second,
+    b.latlong.first, b.latlong.second);
+}
+
+
 void Herds::load(const std::string& filename) {
   std::ifstream input_file_stream;
   input_file_stream.open(filename);
