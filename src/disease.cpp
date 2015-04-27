@@ -176,15 +176,16 @@ BuildSystem(NAADSMScenario& scenario) {
   BuildGraph<SIRGSPN> bg;
   using Edge=BuildGraph<SIRGSPN>::PlaceEdge;
 
+  std::vector<int> herd_ids=scenario.herd_ids();
   int herd_kind=0;
-  for (int location_idx=0; location_idx<herd_cnt; ++location_idx ) {
+  for (int location_idx : herd_ids ) {
     bg.AddPlace({location_idx, herd_kind}, 1);
   }
 
   enum { infect, recover, birth, deaths, deathi, deathr };
 
-  for (int source_idx=0; source_idx<herd_cnt; ++source_idx) {
-    for (int target_idx=0; target_idx<herd_cnt; ++target_idx) {
+  for (int source_idx : herd_ids ) {
+    for (int target_idx : herd_ids) {
       if (target_idx!=source_idx) {
         double rate=scenario.airborne_hazard(source_idx, target_idx);
         bg.AddTransition({infect},

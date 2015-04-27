@@ -20,12 +20,17 @@ class DiseaseModel {
   DistributionDescription latent_, subclinical_, clinical_, immune_;
   std::string name_;
   int id_;
+  std::vector<int> states_;
+  std::vector<DistributionDescription> transitions_;
  public:
   DiseaseModel()=default;
   std::string production_type() const;
+  const std::vector<int>& states() const;
 
   void load_disease_model(boost::property_tree::ptree& tree);
+  void build_states();
  private:
+  bool has_state(DistributionDescription& dist);
   DistributionDescription load_disease_pdf(boost::property_tree::ptree& tree);
 };
 
@@ -41,6 +46,7 @@ class AirborneSpread {
   void load_target(std::string target, boost::property_tree::ptree& tree);
 };
 
+
 struct Herd {
   int id;
   std::string production_type;
@@ -54,12 +60,15 @@ struct Herd {
   double distancekm(const Herd& b) const;
 };
 
+
 class Herds {
  public:
   std::vector<Herd> state_;
+  std::map<int,int> id_to_idx_;
   Herds()=default;
   void load(const std::string& filename);
   int64_t size() const;
+  std::vector<int> herd_ids() const;
 };
 
 
@@ -72,6 +81,8 @@ class NAADSMScenario {
   int64_t herd_cnt() const;
   std::vector<std::array<double,2>> GetLocations() const;
   double airborne_hazard(int64_t source, int64_t target) const;
+  std::vector<int> herd_ids() const;
+  const std::vector<int>& disease_states(int herd_id) const;
  private:
   void load_scenario(const std::string& filename);
 };

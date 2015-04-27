@@ -5,6 +5,7 @@
 #include <locale>
 #include <fcntl.h>
 #include "boost/property_tree/xml_parser.hpp"
+#include "boost/math/special_functions/fpclassify.hpp"
 #include "naadsm_xml.hpp"
 #include "smv.hpp"
 namespace pt = boost::property_tree;
@@ -16,10 +17,37 @@ void DiseaseModel::load_disease_model(pt::ptree& tree) {
   name_=attr.get<std::string>("production-type");
   id_=attr.get<int>("production-type-id");
   std::cout << name_ << " " << id_ << std::endl;
-  latent_=load_disease_pdf(tree.get_child("latent-period"));
-  subclinical_=load_disease_pdf(tree.get_child("infectious-subclinical-period"));
-  clinical_=load_disease_pdf(tree.get_child("infectious-clinical-period"));
-  immune_=load_disease_pdf(tree.get_child("immunity-period"));
+  std::vector<std::string> periods={"latent-period",
+    "infectious-subclinical-period", "infectious-clinical-period",
+    "immunity-period"};
+  for (const auto& period : periods) {
+    transitions_.push_back(load_disease_pdf(tree.get_child(period)));
+  }
+}
+
+
+void DiseaseModel::build_states() {
+  int current_state=1;
+  states_.push_back(current_state); // susceptible=1
+  int transition_idx=0;
+  while (transition_idx<transitions_.size()) {
+    ++current_state;
+    if (has_state(transitions_[transition_idx])) {
+      states_.push_back(current_state);
+      ++transition_idx;
+    } else {
+      transitions_.erase(transitions_.begin()+transition_idx);
+    }
+  }
+}
+
+
+bool DiseaseModel::has_state(DistributionDescription& dist) {
+  if (std::get<0>(dist)==DistributionEnum::point &&
+    boost::math::fpclassify(std::get<1>(dist)["a"])==FP_ZERO) {
+    return false;
+  }
+  return true;
 }
 
 DiseaseModel::DistributionDescription
@@ -33,6 +61,9 @@ DiseaseModel::load_disease_pdf(pt::ptree& tree) {
       dist_type=DistributionEnum::gamma;
     } else if (ppair.first.compare("point")==0) {
       dist_type=DistributionEnum::point;
+      // The parameter for this distribution is unnamed, stored as
+      // a value.
+      params["a"]=ppair.second.get_value<double>();
     } else if (ppair.first.compare("units")==0) {
       if (ppair.second.get<std::string>("xdf:unit").compare("day")!=0) {
         BOOST_LOG_TRIVIAL(warning)<<"One distribution doesn't use days. "
@@ -129,10 +160,22 @@ void Herds::load(const std::string& filename) {
       BOOST_LOG_TRIVIAL(warning) << "Unknown tag for herds " << v.first;
     }
   }
+  // set index of ids
+  for (int idx=0; idx<state_.size(); ++idx) {
+    id_to_idx_[state_[idx].id]=idx;
+  }
 }
 
 int64_t Herds::size() const { return state_.size(); }
 
+std::vector<int> Herds::herd_ids() const {
+  std::vector<int> ids;
+  ids.reserve(state_.size());
+  for (auto& h : state_) {
+    ids.push_back(h.id);
+  }
+  return ids;
+}
 
 void NAADSMScenario::load(const std::string& scenario,
     const std::string& herd) {
@@ -142,6 +185,12 @@ void NAADSMScenario::load(const std::string& scenario,
 
 int64_t NAADSMScenario::herd_cnt() const { return herds_.size(); }
 
+std::vector<int> NAADSMScenario::herd_ids() const { return herds_.herd_ids(); }
+
+const std::vector<int>& NAADSMScenario::disease_states(int herd_id) const {
+  const auto& prod_type=herds_.state_[herds_.id_to_idx_.at(herd_id)].production_type;
+  return disease_model_.at(prod_type).states();
+}
 
 void NAADSMScenario::load_scenario(const std::string& filename) {
   // Load the file respecting UTF-8 locale.
@@ -170,6 +219,9 @@ void NAADSMScenario::load_scenario(const std::string& filename) {
       }
       airborne_spread_[from].load_target(whom, v.second);
     }
+  }
+  for (auto& dm : disease_model_) {
+    dm.second.build_states();
   }
 }
 
