@@ -281,7 +281,7 @@ BuildSystem(NAADSMScenario& scenario) {
   BuildGraph<SIRGSPN> bg;
   using Edge=BuildGraph<SIRGSPN>::PlaceEdge;
 
-  int herd_place=1;
+  int herd_place=0;
   std::vector<int> herd_ids=scenario.herd_ids();
   for (int location_idx : herd_ids ) {
       bg.AddPlace({location_idx, herd_place}, 1);
@@ -419,14 +419,14 @@ int64_t SIR_run(double end_time, const std::vector<Parameter>& parameters,
     state.user.dparams[cp.kind]=cp.value;
   }
 
-  int64_t infected_herd=std::round<int64_t>(
-      state.user.dparams[ADParam::FirstFarm]);
-  for (int64_t init_idx=0; init_idx<herd_cnt; ++init_idx) {
+  int64_t infected_herd=21;
+  std::vector<int> herd_ids=scenario.herd_ids();
+  for (int init_idx : herd_ids ) {
     auto vertex_id=gspn.PlaceVertex({init_idx, 0});
     if (init_idx!=infected_herd) {
       Add<1>(state.marking, vertex_id, {DiseaseState::Susceptible, herd_size});
     } else {
-      Add<1>(state.marking, vertex_id, {DiseaseState::Clinical, herd_size});
+      Add<1>(state.marking, vertex_id, {DiseaseState::Latent, herd_size});
     }
   }
 

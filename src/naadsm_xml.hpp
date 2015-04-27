@@ -25,7 +25,6 @@ class DiseaseModel {
 
   DiseaseModel()=default;
   std::string production_type() const;
-  const std::vector<int>& states() const;
 
   void load_disease_model(boost::property_tree::ptree& tree);
   void build_states();

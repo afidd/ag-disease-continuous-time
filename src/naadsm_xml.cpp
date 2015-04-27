@@ -198,7 +198,7 @@ std::vector<int> NAADSMScenario::herd_ids() const { return herds_.herd_ids(); }
 const std::vector<int>& NAADSMScenario::disease_states(int herd_id) const {
   int herd_idx=herds_.id_to_idx_.at(herd_id);
   const auto& prod_type=herds_.state_[herd_idx].production_type;
-  return disease_model_.at(prod_type).states();
+  return disease_model_.at(prod_type).states_;
 }
 
 
