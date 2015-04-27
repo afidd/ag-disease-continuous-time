@@ -114,6 +114,8 @@ using SIRTransition=ExplicitTransition<Local,RandGen,WithParams>;
 
 using Dist=TransitionDistribution<RandGen>;
 using ExpDist=ExponentialDistribution<RandGen>;
+using GammaDist=GammaDistribution<RandGen>;
+using DiracDist=DiracDistribution<RandGen>;
 
 bool is_infectious(DiseaseState s) {
   return (s==DiseaseState::Subclinical) || (s==DiseaseState::Clinical);
@@ -125,7 +127,6 @@ bool is_infected(DiseaseState s) {
 
 
 class GammaTransition : public SIRTransition {
- private:
   DiseaseState start_state_;
   DiseaseState finish_state_;
   double alpha_;
@@ -141,12 +142,12 @@ class GammaTransition : public SIRTransition {
     double te, double t0, RandGen& rng) override {
     SMVLOG(BOOST_LOG_TRIVIAL(trace)<<"GammaTransition::Enabled begin");
     auto SC=lm.template GetToken<1>(0,
-      [&this](const HerdToken& t)->bool {
+      [this](const HerdToken& t)->bool {
       return t.disease_state==start_state_;
     });
     if (SC.second && SC.first) {
-      SMVLOG(BOOST_LOG_TRIVIAL(trace)<<"GammaTransition::Enabled enable "<<rate_);
-      return {true, std::unique_ptr<ExpDist>(new GammaDist(alpha_, beta_, te))};
+      SMVLOG(BOOST_LOG_TRIVIAL(trace)<<"GammaTransition::Enabled enable ");
+      return {true, std::unique_ptr<GammaDist>(new GammaDist(alpha_, beta_, te))};
     } else {
       SMVLOG(BOOST_LOG_TRIVIAL(trace)<<"GammaTransition::Enabled disable");
       return {false, std::unique_ptr<Dist>(nullptr)};
@@ -156,7 +157,7 @@ class GammaTransition : public SIRTransition {
   virtual void Fire(UserState& s, Local& lm, double t0,
       RandGen& rng) override {
     SMVLOG(BOOST_LOG_TRIVIAL(trace) << "GammaTransition::Fire " << lm);
-    const auto infector=[&this](HerdToken& t) {
+    const auto infector=[this](HerdToken& t) {
       assert(t.disease_state==start_state_);
       t.disease_state=finish_state_;
     };
@@ -166,7 +167,6 @@ class GammaTransition : public SIRTransition {
 
 
 class PointTransition : public SIRTransition {
- private:
   DiseaseState start_state_;
   DiseaseState finish_state_;
   double a_;
@@ -180,12 +180,12 @@ class PointTransition : public SIRTransition {
     double te, double t0, RandGen& rng) override {
     SMVLOG(BOOST_LOG_TRIVIAL(trace)<<"PointTransition::Enabled begin");
     auto SC=lm.template GetToken<1>(0,
-      [&this](const HerdToken& t)->bool {
+      [this](const HerdToken& t)->bool {
       return t.disease_state==start_state_;
     });
     if (SC.second && SC.first) {
-      SMVLOG(BOOST_LOG_TRIVIAL(trace)<<"PointTransition::Enabled enable "<<rate_);
-      return {true, std::unique_ptr<ExpDist>(new DiracDist(a_, te))};
+      SMVLOG(BOOST_LOG_TRIVIAL(trace)<<"PointTransition::Enabled enable ");
+      return {true, std::unique_ptr<DiracDist>(new DiracDist(a_, te))};
     } else {
       SMVLOG(BOOST_LOG_TRIVIAL(trace)<<"PointTransition::Enabled disable");
       return {false, std::unique_ptr<Dist>(nullptr)};
@@ -195,7 +195,7 @@ class PointTransition : public SIRTransition {
   virtual void Fire(UserState& s, Local& lm, double t0,
       RandGen& rng) override {
     SMVLOG(BOOST_LOG_TRIVIAL(trace) << "PointTransition::Fire " << lm);
-    const auto infector=[&this](HerdToken& t) {
+    const auto infector=[this](HerdToken& t) {
       assert(t.disease_state==start_state_);
       t.disease_state=finish_state_;
     };
@@ -250,6 +250,31 @@ using SIRGSPN=
     ExplicitTransitions<ADPlace, ADKey, Local, RandGen, WithParams>;
 
 
+DiseaseState local_to_disease(int state) {
+  switch (state) {
+    case 1:
+      return DiseaseState::Susceptible;
+      break;
+    case 2:
+      return DiseaseState::Latent;
+      break;
+    case 3:
+      return DiseaseState::Subclinical;
+      break;
+    case 4:
+      return DiseaseState::Clinical;
+      break;
+    case 5:
+      return DiseaseState::Immune;
+      break;
+    default:
+      assert(0);
+      break;
+  }
+  return DiseaseState::None;
+}
+
+
 SIRGSPN
 BuildSystem(NAADSMScenario& scenario) {
   int64_t herd_cnt=scenario.herd_cnt();
@@ -270,32 +295,33 @@ BuildSystem(NAADSMScenario& scenario) {
   for (int within_idx : herd_ids) {
     int within_cnt=scenario.disease_cnt(within_idx);
     for (int trans_idx=0; trans_idx<within_cnt; ++trans_idx) {
-      int transition_kind=0;
-      int start_state=0, final_state=0;
+      DistributionEnum transition_kind=DistributionEnum::unknown;
+      int start_state=0, finish_state=0;
       const auto& params=scenario.disease_transition(within_idx, trans_idx,
-        &transition_kind, &start_state, &final_state);
+        transition_kind, start_state, finish_state);
+      DiseaseState start=local_to_disease(start_state);
+      DiseaseState finish=local_to_disease(finish_state);
       switch (transition_kind) {
-        case gamma:
+        case DistributionEnum::gamma:
           // Some question how to identify a transition within a herd because
           // different herds will have different internal transitions.
           // Is there a space for identifying these?
           bg.AddTransition({trans_idx+1},
             {Edge{{within_idx, herd_place}, -1}},
             std::unique_ptr<SIRTransition>(new GammaTransition(
-              start_state, final_state, params["alpha"], params["beta"]))
+              start, finish, params.at("alpha"), params.at("beta")))
             );
           break;
-        case point:
+        case DistributionEnum::point:
           bg.AddTransition({trans_idx+1},
             {Edge{{within_idx, herd_place}, -1}},
             std::unique_ptr<SIRTransition>(new PointTransition(
-              start_state, final_state, params["a"]))
+              start, finish, params.at("a")))
             );
           break;
         default:
           assert(0);
           break;
-        }
       }
     }
   }

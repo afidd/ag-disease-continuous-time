@@ -84,8 +84,9 @@ class NAADSMScenario {
   std::vector<int> herd_ids() const;
   const std::vector<int>& disease_states(int herd_id) const;
   const std::map<std::string,double>& disease_transition(
-    int herd_id, int transition_idx, int& transition_kind, int& start,
-    int& finish) const;
+    int herd_id, int transition_idx, DistributionEnum& transition_kind,
+    int& start, int& finish) const;
+  int disease_cnt(int herd_id);
  private:
   void load_scenario(const std::string& filename);
 };

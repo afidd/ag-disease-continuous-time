@@ -203,17 +203,23 @@ const std::vector<int>& NAADSMScenario::disease_states(int herd_id) const {
 
 
 const std::map<std::string,double>& NAADSMScenario::disease_transition(
-  int herd_id, int transition_idx, int& transition_kind, int& start,
-    int& finish) const {
+  int herd_id, int transition_idx, DistributionEnum& transition_kind,
+    int& start, int& finish) const {
   int herd_idx=herds_.id_to_idx_.at(herd_id);
   const auto& prod_type=herds_.state_[herd_idx].production_type;
-  DiseaseModel& dm=disease_model_.at(prod_type);
+  const DiseaseModel& dm=disease_model_.at(prod_type);
   transition_kind=std::get<0>(dm.transitions_[transition_idx]);
   start=dm.states_[transition_idx+1];
   finish=dm.states_[transition_idx+2];
   return std::get<1>(dm.transitions_[transition_idx]);
 }
 
+
+int NAADSMScenario::disease_cnt(int herd_id) {
+  int herd_idx=herds_.id_to_idx_.at(herd_id);
+  const auto& prod_type=herds_.state_[herd_idx].production_type;
+  return disease_model_.at(prod_type).transitions_.size();
+}
 
 void NAADSMScenario::load_scenario(const std::string& filename) {
   // Load the file respecting UTF-8 locale.
