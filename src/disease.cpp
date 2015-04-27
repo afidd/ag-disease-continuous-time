@@ -116,13 +116,93 @@ using Dist=TransitionDistribution<RandGen>;
 using ExpDist=ExponentialDistribution<RandGen>;
 
 bool is_infectious(DiseaseState s) {
-  return (s==DiseaseState::Subclinical) || (s==DiseaseState::Clinical) ||
-    (s==DiseaseState::Latent);
+  return (s==DiseaseState::Subclinical) || (s==DiseaseState::Clinical);
 }
 
 bool is_infected(DiseaseState s) {
   return (s==DiseaseState::Latent) || is_infectious(s);
 }
+
+
+class GammaTransition : public SIRTransition {
+ private:
+  DiseaseState start_state_;
+  DiseaseState finish_state_;
+  double alpha_;
+  double beta_;
+ public:
+  GammaTransition(DiseaseState start, DiseaseState finish,
+      double alpha, double beta)
+  : start_state_(start), finish_state_(finish), alpha_(alpha), beta_(beta) {}
+  virtual ~GammaTransition() {}
+
+  virtual std::pair<bool, std::unique_ptr<Dist>>
+  Enabled(const UserState& s, const Local& lm,
+    double te, double t0, RandGen& rng) override {
+    SMVLOG(BOOST_LOG_TRIVIAL(trace)<<"GammaTransition::Enabled begin");
+    auto SC=lm.template GetToken<1>(0,
+      [&this](const HerdToken& t)->bool {
+      return t.disease_state==start_state_;
+    });
+    if (SC.second && SC.first) {
+      SMVLOG(BOOST_LOG_TRIVIAL(trace)<<"GammaTransition::Enabled enable "<<rate_);
+      return {true, std::unique_ptr<ExpDist>(new GammaDist(alpha_, beta_, te))};
+    } else {
+      SMVLOG(BOOST_LOG_TRIVIAL(trace)<<"GammaTransition::Enabled disable");
+      return {false, std::unique_ptr<Dist>(nullptr)};
+    }
+  }
+
+  virtual void Fire(UserState& s, Local& lm, double t0,
+      RandGen& rng) override {
+    SMVLOG(BOOST_LOG_TRIVIAL(trace) << "GammaTransition::Fire " << lm);
+    const auto infector=[&this](HerdToken& t) {
+      assert(t.disease_state==start_state_);
+      t.disease_state=finish_state_;
+    };
+    lm.template Move<1, 1, decltype(infector)>(0, 0, 1, infector);
+  }
+};
+
+
+class PointTransition : public SIRTransition {
+ private:
+  DiseaseState start_state_;
+  DiseaseState finish_state_;
+  double a_;
+ public:
+  PointTransition(DiseaseState start, DiseaseState finish, double a)
+  : start_state_(start), finish_state_(finish), a_(a) {}
+  virtual ~PointTransition() {}
+
+  virtual std::pair<bool, std::unique_ptr<Dist>>
+  Enabled(const UserState& s, const Local& lm,
+    double te, double t0, RandGen& rng) override {
+    SMVLOG(BOOST_LOG_TRIVIAL(trace)<<"PointTransition::Enabled begin");
+    auto SC=lm.template GetToken<1>(0,
+      [&this](const HerdToken& t)->bool {
+      return t.disease_state==start_state_;
+    });
+    if (SC.second && SC.first) {
+      SMVLOG(BOOST_LOG_TRIVIAL(trace)<<"PointTransition::Enabled enable "<<rate_);
+      return {true, std::unique_ptr<ExpDist>(new DiracDist(a_, te))};
+    } else {
+      SMVLOG(BOOST_LOG_TRIVIAL(trace)<<"PointTransition::Enabled disable");
+      return {false, std::unique_ptr<Dist>(nullptr)};
+    }
+  }
+
+  virtual void Fire(UserState& s, Local& lm, double t0,
+      RandGen& rng) override {
+    SMVLOG(BOOST_LOG_TRIVIAL(trace) << "PointTransition::Fire " << lm);
+    const auto infector=[&this](HerdToken& t) {
+      assert(t.disease_state==start_state_);
+      t.disease_state=finish_state_;
+    };
+    lm.template Move<1, 1, decltype(infector)>(0, 0, 1, infector);
+  }
+};
+
 
 // Herd infects neighboring herd directly.
 class Infect : public SIRTransition {
@@ -176,21 +256,57 @@ BuildSystem(NAADSMScenario& scenario) {
   BuildGraph<SIRGSPN> bg;
   using Edge=BuildGraph<SIRGSPN>::PlaceEdge;
 
+  int herd_place=1;
   std::vector<int> herd_ids=scenario.herd_ids();
-  int herd_kind=0;
   for (int location_idx : herd_ids ) {
-    bg.AddPlace({location_idx, herd_kind}, 1);
+      bg.AddPlace({location_idx, herd_place}, 1);
   }
 
-  enum { infect, recover, birth, deaths, deathi, deathr };
+  // State enumeration
+  enum { none, susceptible, latent, subclinical, clinical, immune };
+  // Transition enumeration
+  enum { infect=0 };
+
+  for (int within_idx : herd_ids) {
+    int within_cnt=scenario.disease_cnt(within_idx);
+    for (int trans_idx=0; trans_idx<within_cnt; ++trans_idx) {
+      int transition_kind=0;
+      int start_state=0, final_state=0;
+      const auto& params=scenario.disease_transition(within_idx, trans_idx,
+        &transition_kind, &start_state, &final_state);
+      switch (transition_kind) {
+        case gamma:
+          // Some question how to identify a transition within a herd because
+          // different herds will have different internal transitions.
+          // Is there a space for identifying these?
+          bg.AddTransition({trans_idx+1},
+            {Edge{{within_idx, herd_place}, -1}},
+            std::unique_ptr<SIRTransition>(new GammaTransition(
+              start_state, final_state, params["alpha"], params["beta"]))
+            );
+          break;
+        case point:
+          bg.AddTransition({trans_idx+1},
+            {Edge{{within_idx, herd_place}, -1}},
+            std::unique_ptr<SIRTransition>(new PointTransition(
+              start_state, final_state, params["a"]))
+            );
+          break;
+        default:
+          assert(0);
+          break;
+        }
+      }
+    }
+  }
 
   for (int source_idx : herd_ids ) {
     for (int target_idx : herd_ids) {
       if (target_idx!=source_idx) {
         double rate=scenario.airborne_hazard(source_idx, target_idx);
         bg.AddTransition({infect},
-          {Edge{{target_idx, herd_kind}, -1},
-           Edge{{source_idx, herd_kind}, -1}},
+          {Edge{{target_idx, herd_place}, -1},
+           Edge{{source_idx, herd_place}, -1}},
           std::unique_ptr<SIRTransition>(new Infect(rate))
           );
       }

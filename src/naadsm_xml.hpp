@@ -17,12 +17,12 @@ class DiseaseModel {
   using DistributionDescription=
     std::tuple<DistributionEnum,std::map<std::string,double>>;
  private:
-  DistributionDescription latent_, subclinical_, clinical_, immune_;
   std::string name_;
   int id_;
+ public:
   std::vector<int> states_;
   std::vector<DistributionDescription> transitions_;
- public:
+
   DiseaseModel()=default;
   std::string production_type() const;
   const std::vector<int>& states() const;
@@ -83,6 +83,9 @@ class NAADSMScenario {
   double airborne_hazard(int64_t source, int64_t target) const;
   std::vector<int> herd_ids() const;
   const std::vector<int>& disease_states(int herd_id) const;
+  const std::map<std::string,double>& disease_transition(
+    int herd_id, int transition_idx, int& transition_kind, int& start,
+    int& finish) const;
  private:
   void load_scenario(const std::string& filename);
 };

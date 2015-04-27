@@ -26,6 +26,14 @@ void DiseaseModel::load_disease_model(pt::ptree& tree) {
 }
 
 
+/*! Turn what was read into a set of things to build.
+ *  Keep a list of states as integers. 1 is susceptible,
+ *  so maybe { 1, 2, 4, 5 } for susceptible, latent, clinical, immune.
+ *  Keep a list of transitions, erasing those excluded in the description.
+ *  0th is latent to clinical.
+ *  1st is clinical to immune.
+ *  2nd is immune back to susceptible.
+ */
 void DiseaseModel::build_states() {
   int current_state=1;
   states_.push_back(current_state); // susceptible=1
@@ -188,9 +196,24 @@ int64_t NAADSMScenario::herd_cnt() const { return herds_.size(); }
 std::vector<int> NAADSMScenario::herd_ids() const { return herds_.herd_ids(); }
 
 const std::vector<int>& NAADSMScenario::disease_states(int herd_id) const {
-  const auto& prod_type=herds_.state_[herds_.id_to_idx_.at(herd_id)].production_type;
+  int herd_idx=herds_.id_to_idx_.at(herd_id);
+  const auto& prod_type=herds_.state_[herd_idx].production_type;
   return disease_model_.at(prod_type).states();
 }
+
+
+const std::map<std::string,double>& NAADSMScenario::disease_transition(
+  int herd_id, int transition_idx, int& transition_kind, int& start,
+    int& finish) const {
+  int herd_idx=herds_.id_to_idx_.at(herd_id);
+  const auto& prod_type=herds_.state_[herd_idx].production_type;
+  DiseaseModel& dm=disease_model_.at(prod_type);
+  transition_kind=std::get<0>(dm.transitions_[transition_idx]);
+  start=dm.states_[transition_idx+1];
+  finish=dm.states_[transition_idx+2];
+  return std::get<1>(dm.transitions_[transition_idx]);
+}
+
 
 void NAADSMScenario::load_scenario(const std::string& filename) {
   // Load the file respecting UTF-8 locale.
@@ -236,6 +259,8 @@ std::vector<std::array<double,2>> NAADSMScenario::GetLocations() const {
 
 
 double NAADSMScenario::airborne_hazard(int64_t source, int64_t target) const {
+  source=herds_.id_to_idx_.at(source);
+  target=herds_.id_to_idx_.at(target);
   const auto& source_prod=herds_.state_[source].production_type;
   const std::pair<double,double>& source_loc=herds_.state_[source].latlong;
   const auto& target_prod=herds_.state_[source].production_type;
