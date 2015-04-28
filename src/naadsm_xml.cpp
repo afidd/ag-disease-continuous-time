@@ -120,10 +120,19 @@ std::ostream& operator<<(std::ostream& os, const DiseaseModel& dm) {
 
 AirborneSpread::AirborneSpread(std::string source) : source_(source) {}
 
+/*! Converts distance into a hazard rate.
+ *  Model for probability is exponential P=exp(-r dx)
+ *  Given probability for infection in a day, the hazard rate l is:
+ *  P=1 - exp(- l t)
+ *  where t is 1 day.
+ */
 double AirborneSpread::hazard_per_day(
     const std::string& target, double dx) const {
   double probability=std::exp(-probability1km_.at(target)*dx);
-  return -std::log(1-probability);
+  double hazard=-std::log(1-probability);
+  SMVLOG(BOOST_LOG_TRIVIAL(trace)<<"AirborneSpread::hazard_per_day "<<
+    target<< " " << dx << " " << probability << " " << hazard);
+  return hazard;
 }
 
 void AirborneSpread::load_target(std::string target, pt::ptree& tree) {
@@ -313,8 +322,8 @@ double NAADSMScenario::airborne_hazard(int64_t source, int64_t target) const {
   target=herds_.id_to_idx_.at(target);
   const auto& source_prod=herds_.state_[source].production_type;
   const std::pair<double,double>& source_loc=herds_.state_[source].latlong;
-  const auto& target_prod=herds_.state_[source].production_type;
-  const std::pair<double,double>& target_loc=herds_.state_[source].latlong;
+  const auto& target_prod=herds_.state_[target].production_type;
+  const std::pair<double,double>& target_loc=herds_.state_[target].latlong;
 
   double distance=::distancekm(source_loc.first, source_loc.second,
     target_loc.first, target_loc.second);

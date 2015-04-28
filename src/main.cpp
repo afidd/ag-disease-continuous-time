@@ -74,26 +74,12 @@ int main(int argc, char *argv[]) {
   size_t rand_seed=1;
   // Time is in years.
   std::vector<Parameter> parameters;
-  parameters.emplace_back(Parameter{ADParam::Beta0, "beta0", 400,
-    "main infection rate"});
-  parameters.emplace_back(Parameter{ADParam::Beta1, "beta1", 0.6,
-    "seasonality ratio"});
-  parameters.emplace_back(Parameter{ADParam::SeasonalPhase, "phase", 0,
-    "seasonality phase start between (0,1]"});
-  parameters.emplace_back(Parameter{ADParam::Gamma, "gamma", 365/14.0,
-    "recovery rate"});
-  parameters.emplace_back(Parameter{ADParam::Birth, "birth", 1/70.0,
-    "crude rate, before multiplying by number of individuals"});
-  parameters.emplace_back(Parameter{ADParam::Mu, "mu", 1/70.0,
-    "death rate"});
   parameters.emplace_back(Parameter{ADParam::FirstFarm, "firstfarm", 0,
     "first farm infected"});
-  double end_time=30.0;
-  bool exacttraj=true;
-  bool exactinfect=false;
+  double end_time=365.0;
   int thread_cnt=1;
   std::string log_level;
-  std::string data_file("sirexp.h5");
+  std::string data_file("run.h5");
   bool save_file=false;
   std::string translation_file;
   std::string scenario_file;
@@ -116,13 +102,7 @@ int main(int argc, char *argv[]) {
       "seed for random number generator")
     ("endtime",
       po::value<double>(&end_time)->default_value(end_time),
-      "how many years to run")
-    ("exacttraj",
-      po::value<bool>(&exacttraj)->default_value(exacttraj),
-      "save trajectory only when it changes by a certain amount")
-    ("exactinfect",
-      po::value<bool>(&exactinfect)->default_value(exactinfect),
-      "set true to use exact distribution for seasonal infection")
+      "how many days to run")
     ("scenario,s",
       po::value<std::string>(&scenario_file),
       "A NAADSM scenario file")
@@ -179,42 +159,6 @@ int main(int argc, char *argv[]) {
     params[pm.kind]=&pm.value;
   }
 
-  // Birthrate is not frequency-dependent. It scales differently
-  // which creates a fixed point in the phase plane.
-  (*params[ADParam::Birth])*=individual_cnt;
-
-  if (std::abs(*params[ADParam::Beta1])>1) {
-    std::cout << "beta1 should be fractional, between 0 and 1: beta1=" <<
-      *params[ADParam::Beta1] << std::endl;
-    return -4;
-  }
-
-  if ((vm.count("infected") && !vm.count("recovered")) ||
-      (!vm.count("infected") && vm.count("recovered"))) {
-    std::cout << "You have so set the total and I and R, not just some of them."
-      << std::endl;
-    return -3;
-  } else if (!vm.count("infected") && !vm.count("recovered")) {
-    double b=*params[ADParam::Beta0];
-    double m=*params[ADParam::Mu];
-    double g=*params[ADParam::Gamma];
-    double B=*params[ADParam::Birth];
-    // Long-time averages for fixed forcing for ODE model.
-    int64_t susceptible_start=std::floor((m+g)*individual_cnt/b);
-    infected_cnt=std::floor(individual_cnt*(b-m-g)*m/(b*(m+g)));
-    recovered_cnt=individual_cnt-(susceptible_start+infected_cnt);
-  }
-
-  int64_t susceptible_cnt=individual_cnt-(infected_cnt+recovered_cnt);
-  assert(susceptible_cnt>0);
-  if (susceptible_cnt<0) {
-    BOOST_LOG_TRIVIAL(error)<<"Number of susceptibles is "<<susceptible_cnt;
-    return -2;
-  }
-  std::vector<int64_t> sir_init{susceptible_cnt, infected_cnt, recovered_cnt};
-  BOOST_LOG_TRIVIAL(info)<<"Starting with sir="<<sir_init[0]<<" "<<sir_init[1]
-    <<" "<<sir_init[2];
-
   for (auto& showp : parameters) {
     BOOST_LOG_TRIVIAL(info)<<showp.name<<" "<<showp.value;
   }
@@ -224,7 +168,7 @@ int main(int argc, char *argv[]) {
     BOOST_LOG_TRIVIAL(error)<<"could not open output file: "<<data_file;
     return -1;
   }
-  file.WriteExecutableData(compile_info, parsed_options, sir_init);
+  file.WriteExecutableData(compile_info, parsed_options, {0, 0, 0});
   RandGen rng2(rand_seed+1);
 
   NAADSMScenario scenario;
@@ -243,11 +187,7 @@ int main(int argc, char *argv[]) {
   auto runnable=[=, &scenario](RandGen& rng, size_t single_seed,
       size_t idx)->void {
     std::shared_ptr<TrajectoryObserver> observer=0;
-    if (exacttraj) {
-      observer=std::make_shared<TrajectorySave>();
-    } else {
-      observer=std::make_shared<PercentTrajectorySave>();
-    }
+    observer=std::make_shared<TrajectorySave>();
 
     SIR_run(end_time, parameters, scenario, observer, rng);
     file.SaveTrajectory(parameters, single_seed, idx, observer->Trajectory());

@@ -277,14 +277,14 @@ DiseaseState local_to_disease(int state) {
 
 SIRGSPN
 BuildSystem(NAADSMScenario& scenario) {
-  int64_t herd_cnt=scenario.herd_cnt();
   BuildGraph<SIRGSPN> bg;
   using Edge=BuildGraph<SIRGSPN>::PlaceEdge;
 
   int herd_place=0;
   std::vector<int> herd_ids=scenario.herd_ids();
+  int herd_cnt=herd_ids.size();
   for (int location_idx : herd_ids ) {
-      bg.AddPlace({location_idx, herd_place}, 1);
+    bg.AddPlace({location_idx, herd_place}, 1);
   }
 
   // State enumeration
@@ -306,6 +306,10 @@ BuildSystem(NAADSMScenario& scenario) {
           // Some question how to identify a transition within a herd because
           // different herds will have different internal transitions.
           // Is there a space for identifying these?
+          SMVLOG(BOOST_LOG_TRIVIAL(trace)<< within_idx << " " << trans_idx
+            << " " <<
+            start_state << " " << finish_state << " gamma " << 
+            params.at("alpha") << " " << params.at("beta"));
           bg.AddTransition({trans_idx+1},
             {Edge{{within_idx, herd_place}, -1}},
             std::unique_ptr<SIRTransition>(new GammaTransition(
@@ -313,6 +317,9 @@ BuildSystem(NAADSMScenario& scenario) {
             );
           break;
         case DistributionEnum::point:
+            SMVLOG(BOOST_LOG_TRIVIAL(trace) << within_idx << " " <<
+              trans_idx << " " << start_state << " " << finish_state <<
+              " point " << params.at("a"));
           bg.AddTransition({trans_idx+1},
             {Edge{{within_idx, herd_place}, -1}},
             std::unique_ptr<SIRTransition>(new PointTransition(
@@ -330,6 +337,8 @@ BuildSystem(NAADSMScenario& scenario) {
     for (int target_idx : herd_ids) {
       if (target_idx!=source_idx) {
         double rate=scenario.airborne_hazard(source_idx, target_idx);
+        SMVLOG(BOOST_LOG_TRIVIAL(trace) << "airborne rate "<< rate << " "
+            << source_idx << " " << target_idx);
         bg.AddTransition({infect},
           {Edge{{target_idx, herd_place}, -1},
            Edge{{source_idx, herd_place}, -1}},
@@ -376,7 +385,7 @@ struct SIROutput {
 
       auto res=Get<1>(state.marking, target_internal_place,
         [](const HerdToken& t)->bool {
-          return is_infectious(t.disease_state);
+          return is_infected(t.disease_state);
         });
       assert(res.second==true);
       assert(res.first==true);
@@ -388,6 +397,13 @@ struct SIROutput {
       assert(sres.first==true);
 
       observer_->Step({transition.kind, target, source, state.CurrentTime()});
+    } else {
+      auto transition_places=
+          NeighborsOfTransition(gspn_, state.last_transition);
+      int64_t target_internal_place=std::get<0>(transition_places[0]);
+      int64_t target=gspn_.VertexPlace(
+          std::get<0>(transition_places[0])).location;
+      observer_->Step({transition.kind, target, target, state.CurrentTime()});
     }
     ++step_cnt;
   }
