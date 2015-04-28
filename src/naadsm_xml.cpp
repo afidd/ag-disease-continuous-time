@@ -121,9 +121,10 @@ std::ostream& operator<<(std::ostream& os, const DiseaseModel& dm) {
 AirborneSpread::AirborneSpread(std::string source) : source_(source) {}
 
 /*! Converts distance into a hazard rate.
- *  Model for probability is exponential P=exp(-r dx)
+ *  Model for probability is exponential P=exp(-r d) where we are told
+ *  0.5 = exp(-r 1) so r=-ln(0.5)
  *  Given probability for infection in a day, the hazard rate l is:
- *  P=1 - exp(- l t)
+ *  P=1 - exp(- l t) so l=-ln(1-P)
  *  where t is 1 day.
  */
 double AirborneSpread::hazard_per_day(
