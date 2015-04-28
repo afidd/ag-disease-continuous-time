@@ -207,7 +207,7 @@ class HDFFile::impl {
       return false;
     }
     
-    std::vector<int> integer(trajectory.size(), 0);
+    std::vector<int64_t> integer(trajectory.size(), 0);
 
     {
       hsize_t sdims=trajectory.size();

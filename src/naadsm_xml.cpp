@@ -130,9 +130,16 @@ AirborneSpread::AirborneSpread(std::string source) : source_(source) {}
 double AirborneSpread::hazard_per_day(
     const std::string& target, double dx) const {
   double probability=std::exp(-probability1km_.at(target)*dx);
-  double hazard=-std::log(1-probability);
+  double hazard;
+  if (probability>1e-6) {
+    hazard=-std::log(1-probability);
+  } else {
+    // Include series approximation because small logs can return -0.
+    hazard=probability*(1+0.5*probability);
+  }
   SMVLOG(BOOST_LOG_TRIVIAL(trace)<<"AirborneSpread::hazard_per_day "<<
     target<< " " << dx << " " << probability << " " << hazard);
+  assert(hazard>0);
   return hazard;
 }
 
