@@ -229,6 +229,7 @@ int main(int argc, char *argv[]) {
 
   NAADSMScenario scenario;
   scenario.load(scenario_file, herd_file);
+  BOOST_LOG_TRIVIAL(trace) << scenario;
 
   auto locations=scenario.GetLocations();
   BOOST_LOG_TRIVIAL(debug)<<"locations";

@@ -29,6 +29,7 @@ class DiseaseModel {
   void load_disease_model(boost::property_tree::ptree& tree);
   void build_states();
  private:
+  friend std::ostream& operator<<(std::ostream& os, const DiseaseModel& dm);
   bool has_state(DistributionDescription& dist);
   DistributionDescription load_disease_pdf(boost::property_tree::ptree& tree);
 };
@@ -43,6 +44,8 @@ class AirborneSpread {
   double hazard_per_day(const std::string& target, double distance) const;
 
   void load_target(std::string target, boost::property_tree::ptree& tree);
+ private:
+  friend std::ostream& operator<<(std::ostream& os, const AirborneSpread& dm);
 };
 
 
@@ -57,6 +60,7 @@ struct Herd {
     std::string status) : id(id), production_type(prod), size(s),
     latlong(l), status(status) {}
   double distancekm(const Herd& b) const;
+  friend std::ostream& operator<<(std::ostream& os, const Herd& h);
 };
 
 
@@ -68,6 +72,8 @@ class Herds {
   void load(const std::string& filename);
   int64_t size() const;
   std::vector<int> herd_ids() const;
+ private:
+  friend std::ostream& operator<<(std::ostream& os, const Herds& h);
 };
 
 
@@ -87,6 +93,7 @@ class NAADSMScenario {
     int& start, int& finish) const;
   int disease_cnt(int herd_id);
  private:
+  friend std::ostream& operator<<(std::ostream& os, const NAADSMScenario& s);
   void load_scenario(const std::string& filename);
 };
 

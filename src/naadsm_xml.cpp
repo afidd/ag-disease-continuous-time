@@ -16,7 +16,6 @@ void DiseaseModel::load_disease_model(pt::ptree& tree) {
   auto attr=tree.get_child("<xmlattr>");
   name_=attr.get<std::string>("production-type");
   id_=attr.get<int>("production-type-id");
-  std::cout << name_ << " " << id_ << std::endl;
   std::vector<std::string> periods={"latent-period",
     "infectious-subclinical-period", "infectious-clinical-period",
     "immunity-period"};
@@ -101,12 +100,30 @@ DiseaseModel::load_disease_pdf(pt::ptree& tree) {
   return std::make_tuple(dist_type, params);
 }
 
+std::ostream& operator<<(std::ostream& os, const DiseaseModel& dm) {
+  os << "DiseaseModel("<<dm.name_<<") : "<<dm.id_ << std::endl;
+  for (int s : dm.states_) {
+    os << s << " ";
+  }
+  for (const auto& dd : dm.transitions_) {
+    DistributionEnum de=std::get<0>(dd);
+    const auto& params=std::get<1>(dd);
+    if (de==DistributionEnum::gamma) {
+      os << "gamma " << params.at("alpha") << " " << params.at("beta")
+        << std::endl;
+    } else if (de==DistributionEnum::point) {
+      os << "point " << params.at("a") << std::endl;
+    }
+  }
+  return os;
+}
 
 AirborneSpread::AirborneSpread(std::string source) : source_(source) {}
 
 double AirborneSpread::hazard_per_day(
     const std::string& target, double dx) const {
-  return std::exp(-probability1km_.at(target)*dx);
+  double probability=std::exp(-probability1km_.at(target)*dx);
+  return -std::log(1-probability);
 }
 
 void AirborneSpread::load_target(std::string target, pt::ptree& tree) {
@@ -115,6 +132,14 @@ void AirborneSpread::load_target(std::string target, pt::ptree& tree) {
   assert(tree.get<int>("wind-direction-start.value")==0);
   assert(tree.get<int>("wind-direction-end.value")==360);
   assert(tree.get<int>("delay.probability-density-function.point")==0);
+}
+
+std::ostream& operator<<(std::ostream& os, const AirborneSpread& dm) {
+  os << "AirborneSpread("<<dm.source_<<")"<<std::endl;
+  for (const auto& entry : dm.probability1km_) {
+    os << entry.first << " " << entry.second << std::endl;
+  }
+  return os;
 }
 
 
@@ -174,6 +199,14 @@ void Herds::load(const std::string& filename) {
   }
 }
 
+std::ostream& operator<<(std::ostream& os, const Herd& h) {
+  os << "Herd("<<h.id<<", "<<h.production_type<<", "<<
+    h.size<<", " << h.status << ", " << h.latlong.first << ", "
+    << h.latlong.second << ")";
+  return os;
+}
+
+
 int64_t Herds::size() const { return state_.size(); }
 
 std::vector<int> Herds::herd_ids() const {
@@ -183,6 +216,13 @@ std::vector<int> Herds::herd_ids() const {
     ids.push_back(h.id);
   }
   return ids;
+}
+
+std::ostream& operator<<(std::ostream& os, const Herds& h) {
+  for (const auto& herd : h.state_) {
+    os << herd << std::endl;
+  }
+  return os;
 }
 
 void NAADSMScenario::load(const std::string& scenario,
@@ -210,7 +250,11 @@ const std::map<std::string,double>& NAADSMScenario::disease_transition(
   const DiseaseModel& dm=disease_model_.at(prod_type);
   transition_kind=std::get<0>(dm.transitions_[transition_idx]);
   start=dm.states_[transition_idx+1];
-  finish=dm.states_[transition_idx+2];
+  int finish_idx=transition_idx+2;
+  if (finish_idx>=dm.states_.size()) {
+    finish_idx=0; // from immune to susceptible. It's a chain.
+  }
+  finish=dm.states_[finish_idx];
   return std::get<1>(dm.transitions_[transition_idx]);
 }
 
@@ -276,6 +320,17 @@ double NAADSMScenario::airborne_hazard(int64_t source, int64_t target) const {
     target_loc.first, target_loc.second);
   return airborne_spread_.at(source_prod).hazard_per_day(
     target_prod, distance);
+}
+
+std::ostream& operator<<(std::ostream& os, const NAADSMScenario& s) {
+  for (const auto& dm : s.disease_model_) {
+    os << dm.first << " " << dm.second;
+  }
+  for (const auto& as : s.airborne_spread_) {
+    os << as.first << " " << as.second;
+  }
+  os << s.herds_;
+  return os;
 }
 
 
