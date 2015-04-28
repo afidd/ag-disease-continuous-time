@@ -184,6 +184,16 @@ int main(int argc, char *argv[]) {
   }
   file.SaveLocations(locations);
 
+  if (false) {
+    // Print sorted distances among all farms.
+    auto dx=scenario.Distances();
+    std::sort(dx.begin(), dx.end());
+    for (double d : dx) {
+      std::cout << d << ", ";
+    }
+    std::cout << std::endl;
+  }
+
   auto runnable=[=, &scenario](RandGen& rng, size_t single_seed,
       size_t idx)->void {
     std::shared_ptr<TrajectoryObserver> observer=0;

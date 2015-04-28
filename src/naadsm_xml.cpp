@@ -127,29 +127,18 @@ AirborneSpread::AirborneSpread(std::string source) : source_(source) {}
  *  P=1 - exp(- l t) so l=-ln(1-P)
  *  where t is 1 day.
  */
-double AirborneSpread::hazard_per_day(
-    const std::string& target, double dx) const {
-  double probability=std::exp(-probability1km_.at(target)*dx);
-  double hazard;
-  if (probability>1e-6) {
-    hazard=-std::log(1-probability);
-  } else {
-    // Include series approximation because small logs can return -0.
-    hazard=probability*(1+0.5*probability);
-  }
-  SMVLOG(BOOST_LOG_TRIVIAL(trace)<<"AirborneSpread::hazard_per_day "<<
-    target<< " " << dx << " " << probability << " " << hazard);
-  assert(hazard>0);
-  return hazard;
+double AirborneSpread::spread_factor(const std::string& target) const {
+  return probability1km_.at(target);
 }
 
+
 void AirborneSpread::load_target(std::string target, pt::ptree& tree) {
-  double p=tree.get<double>("prob-spread-1km");
-  probability1km_[target]=-std::log(p);
+  probability1km_[target]=tree.get<double>("prob-spread-1km");
   assert(tree.get<int>("wind-direction-start.value")==0);
   assert(tree.get<int>("wind-direction-end.value")==360);
   assert(tree.get<int>("delay.probability-density-function.point")==0);
 }
+
 
 std::ostream& operator<<(std::ostream& os, const AirborneSpread& dm) {
   os << "AirborneSpread("<<dm.source_<<")"<<std::endl;
@@ -214,6 +203,7 @@ void Herds::load(const std::string& filename) {
   for (int idx=0; idx<state_.size(); ++idx) {
     id_to_idx_[state_[idx].id]=idx;
   }
+  this->CalculateFactor();
 }
 
 std::ostream& operator<<(std::ostream& os, const Herd& h) {
@@ -234,6 +224,52 @@ std::vector<int> Herds::herd_ids() const {
   }
   return ids;
 }
+
+
+/*! After load, make derivative variables.
+ *  This makes infection_factor_, which is a normalized cumulative
+ *  histogram of how many herds have a certain count of animals.
+ */
+void Herds::CalculateFactor() {
+  const int special_factor=2; // Comes from NAADSM.
+  std::map<int,double,std::less<int>> histogram;
+  // Count them up.
+  for (const auto& h : state_) {
+    auto loc=histogram.find(h.size);
+    if (loc==histogram.end()) {
+      histogram[h.size]=1;
+    } else {
+      loc->second+=1;
+    }
+  }
+  // Find sum for normalization.
+  double total=0;
+  for (const auto& hval : histogram) {
+    total+=hval.second;
+    BOOST_LOG_TRIVIAL(trace)<<"InfectionFactorCumulant "<<hval.first<<" "
+      <<hval.second;
+  }
+  // Create cumulant
+  double running=0;
+  for (auto& hiter : histogram) {
+    running+=hiter.second;
+    hiter.second=special_factor*running/total;
+    BOOST_LOG_TRIVIAL(trace)<<"InfectionFactorCumulant "<<hiter.first<<" "
+      <<hiter.second;
+  }
+  // Put factors into an array.
+  infection_factor_.reserve(state_.size());
+  for (const auto& herd : state_) {
+    // Assign the average of the herd's cumulant and that preceding it.
+    // Again, mimicing NAADSM. That's why we do it this way.
+    auto iter=histogram.find(herd.size);
+    double val=iter->second;
+    --iter;
+    val+=iter->second;
+    infection_factor_.push_back(0.5*val);
+  }
+}
+
 
 std::ostream& operator<<(std::ostream& os, const Herds& h) {
   for (const auto& herd : h.state_) {
@@ -282,6 +318,21 @@ int NAADSMScenario::disease_cnt(int herd_id) {
   return disease_model_.at(prod_type).transitions_.size();
 }
 
+std::vector<double> NAADSMScenario::Distances() {
+  auto N=herds_.state_.size();
+  std::vector<double> distances(N*(N-1)/2, 0);
+  size_t idx=0;
+  const std::vector<Herd>& herds=herds_.state_;
+  for (size_t i=0; i<N; ++i) {
+    const std::pair<double,double>& a=herds[i].latlong;
+    for (size_t j=i+1; j<N; ++j) {
+      distances[idx++]=::distancekm(a.first, a.second,
+        herds[j].latlong.first, herds[j].latlong.second);
+    }
+  }
+  return distances;
+}
+
 void NAADSMScenario::load_scenario(const std::string& filename) {
   // Load the file respecting UTF-8 locale.
   std::ifstream input_file_stream;
@@ -325,18 +376,39 @@ std::vector<std::array<double,2>> NAADSMScenario::GetLocations() const {
 }
 
 
-double NAADSMScenario::airborne_hazard(int64_t source, int64_t target) const {
-  source=herds_.id_to_idx_.at(source);
-  target=herds_.id_to_idx_.at(target);
+double NAADSMScenario::airborne_hazard(int64_t source_id,
+    int64_t target_id) const {
+  int64_t source=herds_.id_to_idx_.at(source_id);
+  int64_t target=herds_.id_to_idx_.at(target_id);
   const auto& source_prod=herds_.state_[source].production_type;
   const std::pair<double,double>& source_loc=herds_.state_[source].latlong;
+  double source_factor=herds_.infection_factor_[source];
   const auto& target_prod=herds_.state_[target].production_type;
   const std::pair<double,double>& target_loc=herds_.state_[target].latlong;
+  double target_factor=herds_.infection_factor_[target];
 
   double distance=::distancekm(source_loc.first, source_loc.second,
     target_loc.first, target_loc.second);
-  return airborne_spread_.at(source_prod).hazard_per_day(
-    target_prod, distance);
+
+  const double probability_cutoff=1e-6;
+  double spread=airborne_spread_.at(source_prod).spread_factor(target_prod);
+  double probability=std::pow(spread, distance)*source_factor*target_factor;
+  double hazard;
+  if (probability>=1) {
+    hazard=1000;
+    BOOST_LOG_TRIVIAL(warning)<<"airborne_hazard probability over one "
+      << "source " << source_id << " target " << target_id;
+  } else if (probability>probability_cutoff) {
+    hazard=-std::log(1-probability);
+  } else {
+    hazard=0;
+  }
+  SMVLOG(BOOST_LOG_TRIVIAL(trace)<<"airborne_hazard "
+    << source_id << '\t' << target_id << '\t' << source_factor
+    << '\t' << 1 << '\t' << std::pow(spread, distance)
+    << '\t' << target_factor << '\t' << probability);
+  assert(hazard>=0);
+  return hazard;
 }
 
 std::ostream& operator<<(std::ostream& os, const NAADSMScenario& s) {

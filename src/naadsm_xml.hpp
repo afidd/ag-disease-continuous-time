@@ -41,7 +41,7 @@ class AirborneSpread {
  public:
   AirborneSpread()=default;
   AirborneSpread(std::string source);
-  double hazard_per_day(const std::string& target, double distance) const;
+  double spread_factor(const std::string& target) const;
 
   void load_target(std::string target, boost::property_tree::ptree& tree);
  private:
@@ -68,10 +68,12 @@ class Herds {
  public:
   std::vector<Herd> state_;
   std::map<int,int> id_to_idx_;
+  std::vector<double> infection_factor_;
   Herds()=default;
   void load(const std::string& filename);
   int64_t size() const;
   std::vector<int> herd_ids() const;
+  void CalculateFactor();
  private:
   friend std::ostream& operator<<(std::ostream& os, const Herds& h);
 };
@@ -92,6 +94,7 @@ class NAADSMScenario {
     int herd_id, int transition_idx, DistributionEnum& transition_kind,
     int& start, int& finish) const;
   int disease_cnt(int herd_id);
+  std::vector<double> Distances();
  private:
   friend std::ostream& operator<<(std::ostream& os, const NAADSMScenario& s);
   void load_scenario(const std::string& filename);

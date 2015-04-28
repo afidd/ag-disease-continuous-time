@@ -11,6 +11,7 @@
 #include "stochnet.hpp"
 #include "boost/random/mersenne_twister.hpp"
 #include "boost/log/core.hpp"
+#include "boost/math/special_functions/fpclassify.hpp"
 #include "boost/math/constants/constants.hpp"
 #include "boost/property_map/property_map.hpp"
 #include "boost/mpl/vector.hpp"
@@ -339,11 +340,15 @@ BuildSystem(NAADSMScenario& scenario) {
         double rate=scenario.airborne_hazard(source_idx, target_idx);
         SMVLOG(BOOST_LOG_TRIVIAL(trace) << "airborne rate "<< rate << " "
             << source_idx << " " << target_idx);
-        bg.AddTransition({infect},
-          {Edge{{target_idx, herd_place}, -1},
-           Edge{{source_idx, herd_place}, -1}},
-          std::unique_ptr<SIRTransition>(new Infect(rate))
-          );
+        if (boost::math::fpclassify(rate)!=FP_ZERO) {
+          bg.AddTransition({infect},
+            {Edge{{target_idx, herd_place}, -1},
+             Edge{{source_idx, herd_place}, -1}},
+            std::unique_ptr<SIRTransition>(new Infect(rate))
+            );
+        } else {
+          ; // The hazard rate is zero, so don't create a transition.
+        }
       }
     }
   }
