@@ -111,7 +111,7 @@ def errdisp(a, b, color):
 
 def compare():
     col1=keyed(read_file("adct_out.txt"))
-    col2=keyed(read_file("test_output2.txt"))
+    col2=keyed(read_file("testoutput2.txt"))
     compare_keyed(col1, col2)
 
 
