@@ -406,7 +406,10 @@ double NAADSMScenario::airborne_hazard(int64_t source_id,
   SMVLOG(BOOST_LOG_TRIVIAL(trace)<<"airborne_hazard "
     << source_id << '\t' << target_id << '\t' << source_factor
     << '\t' << 1 << '\t' << std::pow(spread, distance)
-    << '\t' << target_factor << '\t' << probability);
+    << '\t' << target_factor << '\t' << probability << '\t'
+    << source_loc.first << '\t' << source_loc.second << '\t'
+    << target_loc.first << '\t' << target_loc.second << '\t'
+    << distance);
   assert(hazard>=0);
   return hazard;
 }
