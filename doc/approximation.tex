@@ -1,0 +1,128 @@
+\documentclass{article}
+\title{Approximation of Continuous Time with Discrete Time}
+\author{Drew Dolgert}
+\begin{document}
+\maketitle
+
+\section{Introduction}
+Spatial spread of disease among agricultural locations
+is an important problem.
+Discrete stochastic simulation in continuous time provides
+a precise methodology for modeling this spread.
+Most simulation is done in discrete time, however,
+because the problem size is large and
+these can be faster to calculate.
+How much of a difference does it make to use discrete-time
+or continuous-time simulation?
+
+There are many different ways to calculate the next state of
+a discrete-time simulation. If the exact description of the
+problem is a continuous-time model, then one exact
+discrete-time model is defined by observing the continuous-time
+model at fixed intervals.
+
+There are two other known discrete-time dynamics of interest.
+The \emph{conflict resolution method} records changes
+to the state and resolves conflicts with rules whenever they
+occur. The \emph{Molloy method} enumerates the complete
+set of next states of the system and solves for their
+likelihoods before sampling a new state. Both
+methods will be described in greater detail in the following.
+
+The final section describes a third method.
+A well-posed continuous-time model predicts a set of
+allowed trajectories, each with a likelihood from
+which to sample the next state of the system.
+
+\section{Conflict Resolution Method}
+This is the simplest method, in use within \textsc{naadsm}.
+Call the time of the system $T_n=n\Delta t$. The state of
+the system at time $T_n$ is $X_n$.
+
+Define the state of the system as a set of physical
+states, $X_n=\{s_j\}$.
+\begin{enumerate}
+\item Given a state, $X_n$, and enabled transitions, $L_i$,
+each transition produces a set of modified physical states,
+$\{s_j^i\}$. The $\{s_j^i\}$ are not all states of the
+system, just the modified ones.
+\item If any of the same physical states in those sets aren't
+equal, then apply a rule to decide a new state.
+A rule looks at which transitions caused the state
+change and what are the new states in order to choose
+what new state to apply.
+A rule is of the form $(s_j^i, s_j^k)\rightarrow s_j$.
+\end{enumerate}
+
+A conflict is defined according to whether the
+final state of transitions disagrees. It's not a consideration
+of probability in generation of the next state.
+
+
+\section{Molloy Method}
+This technique begins with an assumption that
+the discrete time stochastic system is specified as a
+set of discrete time stochastic processes, each of which
+has an enabling time, $T^i_n=n\Delta t$, and a probability
+mass function (pmf) $f_i(T-T^i_n)$. Transitions are in
+conflict if they change the same starting state, as opposed
+to resulting in different final states at $T_{n+1}$
+
+Molloy's method begins by enumerating possible final
+states at $T_{n+1}$. Given transition $a$ and $b$ in conflict,
+the final states are $(!a,!b)$, $(!a,b)$, and $(a,!b)$,
+with $(a,b)$ excluded.
+
+The algorithm can be derived by imagining a two draws, one
+for $a$ and one for $b$, where both are selected to occur.
+Any time this happens, assign the result either to
+$(!a,b)$ or $(a,!b)$, weighted by the relative probability
+of $a$ and $b$. This generalizes to many transitions.
+
+
+\section{Single Transition Method}
+This section describes a way to create a discrete-time
+model from a continuous-time model with the approximation
+that there are no hidden intermediate states during the
+time step.
+
+Start with a continuous-time, discrete space model
+for many processes.
+It is possible for one transition's firing to disable
+another transition but not the other way around.
+Disabling of transitions can be expressed as a directed
+graph.
+
+If $a$ disables $b$, then $b$ can fire before $a$, but not
+vice versa. The probability that $b$ fires before $a$ is
+\begin{equation}
+  \int_0^{t_b}d\tau_b\int_{t_b}^{\Delta t}d\tau_a
+  f_b(\tau_b)f_a(\tau_a).
+\end{equation}
+This would compute the probability for transition to
+a final state $(a,b)$ excluding $a$ before $b$.
+
+
+\section{Enumeration of States}
+What transitions may exclude the firing of other
+transitions depends on the current state of the
+system. Consider a continuous-time discrete-state
+model model specified by stoichiometry. This makes
+a matrix representation of states and transitions
+practical.
+
+The current state of the system is $\vec{m}$.
+States and transitions form a bipartite graph
+specified by two adjacency matrices, $A_{st}$ and
+$A_{ts}$. Stochiomietry is associated with edges
+of these graphs and represented by diagonal
+matrices, $\mbox{diag}(S_i)$ and $\mbox{diag}(S_o)$,
+for in and out of the transition.
+
+From these matrices, we an construct a directed
+graph of which transitions disable which others.
+
+
+
+
+\end{document}
