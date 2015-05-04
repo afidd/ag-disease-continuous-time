@@ -217,15 +217,16 @@ class HDFFile::impl {
           return e.s;
         });
 
-      hid_t attr1_id=H5Acreate2(dset_group, "Event",
-        H5T_STD_I64LE, sirspace_id, H5P_DEFAULT, H5P_DEFAULT);
-      herr_t at1status=H5Awrite(attr1_id, H5T_NATIVE_LONG, integer.data());
+      hid_t attr1_id=H5Dcreate2(dset_group, "Event",
+        H5T_STD_I64LE, sirspace_id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+      herr_t at1status=H5Dwrite(attr1_id, H5T_NATIVE_LONG,
+        H5S_ALL, H5S_ALL, H5P_DEFAULT, integer.data());
       if (at1status<0) {
         BOOST_LOG_TRIVIAL(error)<<"Could not write attribute Initial Values";
         return false;
       }
       H5Sclose(sirspace_id);
-      H5Aclose(attr1_id);
+      H5Dclose(attr1_id);
     }
     {
       hsize_t sdims=trajectory.size();
@@ -235,15 +236,16 @@ class HDFFile::impl {
           return e.i;
         });
 
-      hid_t attr1_id=H5Acreate2(dset_group, "Whom",
-        H5T_STD_I64LE, sirspace_id, H5P_DEFAULT, H5P_DEFAULT);
-      herr_t at1status=H5Awrite(attr1_id, H5T_NATIVE_LONG, integer.data());
+      hid_t attr1_id=H5Dcreate2(dset_group, "Whom",
+        H5T_STD_I64LE, sirspace_id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+      herr_t at1status=H5Dwrite(attr1_id, H5T_NATIVE_LONG,
+        H5S_ALL, H5S_ALL, H5P_DEFAULT, integer.data());
       if (at1status<0) {
         BOOST_LOG_TRIVIAL(error)<<"Could not write attribute Initial Values";
         return false;
       }
       H5Sclose(sirspace_id);
-      H5Aclose(attr1_id);
+      H5Dclose(attr1_id);
     }
     {
       hsize_t sdims=trajectory.size();
@@ -253,15 +255,16 @@ class HDFFile::impl {
           return e.r;
         });
 
-      hid_t attr1_id=H5Acreate2(dset_group, "Who",
-        H5T_STD_I64LE, sirspace_id, H5P_DEFAULT, H5P_DEFAULT);
-      herr_t at1status=H5Awrite(attr1_id, H5T_NATIVE_LONG, integer.data());
+      hid_t attr1_id=H5Dcreate2(dset_group, "Who",
+        H5T_STD_I64LE, sirspace_id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+      herr_t at1status=H5Dwrite(attr1_id, H5T_NATIVE_LONG,
+        H5S_ALL, H5S_ALL, H5P_DEFAULT, integer.data());
       if (at1status<0) {
         BOOST_LOG_TRIVIAL(error)<<"Could not write attribute Initial Values";
         return false;
       }
       H5Sclose(sirspace_id);
-      H5Aclose(attr1_id);
+      H5Dclose(attr1_id);
     }
     {
       hsize_t sdims=trajectory.size();
@@ -272,15 +275,16 @@ class HDFFile::impl {
           return e.t;
         });
 
-      hid_t attr1_id=H5Acreate2(dset_group, "When",
-        H5T_IEEE_F64LE, sirspace_id, H5P_DEFAULT, H5P_DEFAULT);
-      herr_t at1status=H5Awrite(attr1_id, H5T_NATIVE_DOUBLE, data.data());
+      hid_t attr1_id=H5Dcreate2(dset_group, "When",
+        H5T_IEEE_F64LE, sirspace_id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+      herr_t at1status=H5Dwrite(attr1_id, H5T_NATIVE_DOUBLE,
+        H5S_ALL, H5S_ALL, H5P_DEFAULT, data.data());
       if (at1status<0) {
         BOOST_LOG_TRIVIAL(error)<<"Could not write attribute Initial Values";
         return false;
       }
       H5Sclose(sirspace_id);
-      H5Aclose(attr1_id);
+      H5Dclose(attr1_id);
     }
 
     // Now write dataset attributes.

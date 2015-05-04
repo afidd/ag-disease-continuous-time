@@ -1,0 +1,10 @@
+# install.packages("np")
+library(np)
+x<-read.csv("sizesc.csv")
+# ordered means ordered, categorical data.
+y<-data.frame(outbreaksize=ordered(x$outbreaksize))
+bw<-npudensbw(dat=y)
+ker<-npudens(bw)
+pdf("outbreaksize.pdf")
+print(ker)
+dev.off()

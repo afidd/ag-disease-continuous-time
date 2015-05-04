@@ -234,6 +234,7 @@ void Herds::CalculateFactor() {
   const int special_factor=2; // Comes from NAADSM.
   std::map<int,double,std::less<int>> histogram;
   // Count them up.
+  histogram[0]=0;
   for (const auto& h : state_) {
     auto loc=histogram.find(h.size);
     if (loc==histogram.end()) {
