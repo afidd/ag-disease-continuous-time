@@ -1,6 +1,9 @@
 import logging
 import numpy as np
 import h5py
+from default_parser import DefaultArgumentParser
+
+logger=logging.getLogger(__file__)
 
 
 def read_naadsmsc(filename):
@@ -28,8 +31,8 @@ def combine_counts(starting, combine):
     return starting
 
 
-def read_multiple_naadsmsc(filename):
-    hdf=h5py.File("naadsm.h5", "w")
+def read_multiple_naadsmsc(filename, outfile):
+    hdf=h5py.File(outfile, "w")
     hdf.create_group("/trajectory")
 
     allowed=dict()
@@ -123,13 +126,21 @@ def save_h5(openh5, events):
 
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.DEBUG)
-    infile="/work/ajd27/naadsmdata/HPAI_Kershaw_Parameters_no_controls_airborne_only_p5_runs1000_2.out"
-    if True:
-        allowed_transitions=read_multiple_naadsmsc(infile)
-        print(allowed_transitions)
-    else:
-        vals=read_naadsmsc(infile)
+    parser=DefaultArgumentParser(description="Produces csv of total outbreak size")
+    parser.add_argument("--input", dest="infile", action="store",
+        default="naadsm.out", help="Input trace from NAADSM/SC")
+    parser.add_argument("--output", dest="outfile", action="store",
+        default="naadsm.h5", help="HDF5 file with events")
+    parser.add_function("multiple", "Copy all events to output file")
+    parser.add_function("showstates", "Take a look at state transitions")
+    args=parser.parse_args()
+
+    if args.multiple:
+        allowed_transitions=read_multiple_naadsmsc(args.infile, args.outfile)
+        logger.info("allowed transitions are {0}.".format(allowed_transitions))
+
+    if args.showstates:
+        vals=read_naadsmsc(args.infile)
         print("The number of farms is {0}".format(vals.shape[1]))
         print("The number of time steps is {0}".format(len(vals)))
         print("There are {0} nonzero entries in the state array.".format(
@@ -143,7 +154,8 @@ if __name__ == "__main__":
         transitions_type={(0,1) : 1, (0,3) : 0, (1,3) : 3}
         events=events_from_states(vals, transitions_type)
 
-        f=h5py.File("naadsm.h5", "w")
+        logger.info("Writing a trajectory into {0}".format(args.outfile))
+        f=h5py.File(args.outfile, "w")
         f.create_group("/trajectory")
         save_h5(f, events)
 

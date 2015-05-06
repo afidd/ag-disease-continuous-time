@@ -1,13 +1,16 @@
 '''
-This plots total outbreak size for an ensemble.
-Working from the pretty plot at
-http://scikit-learn.org/stable/auto_examples/neighbors/plot_kde_1d.html
+Produces a csv of outbreak sizes.
 '''
 import csv
+import logging
 import h5py
 import numpy as np
 import matplotlib.pyplot as plt
+from default_parser import DefaultArgumentParser
 # from sklearn.neighbors import KernelDensity
+
+logger=logging.getLogger(__file__)
+
 
 def run_sizes(filename):
     f=h5py.File(filename)
@@ -24,9 +27,13 @@ def run_sizes(filename):
             sizes.append(cnt)
     return sizes
 
-def write_totals(filename):
+def write_totals(filename, outfile):
+    logger.info("Reading input {0}. Writing to {1}".format(filename, outfile))
     totals=run_sizes(filename)
-    with open('sizesc.csv', 'w') as csvfile:
+    logger.info("Number of trajectories {0}, average size {1}".format(
+        len(totals), np.average(totals)))
+    logger.debug("Sizes are {0}".format(totals))
+    with open(outfile, 'w') as csvfile:
         writer=csv.writer(csvfile, quoting=csv.QUOTE_MINIMAL)
         writer.writerow(["trial", "outbreaksize"])
         for i in range(len(totals)):
@@ -41,5 +48,11 @@ def write_totals(filename):
 # ax[0,0].fill(X_plot[:, 0], np.exp(log_dens), fc='#AAAFF')
 
 if __name__ == '__main__':
-    #write_totals("naadsm.h5")
-    write_totals("../run.h5")
+    parser=DefaultArgumentParser(description="Produces csv of total outbreak size")
+    parser.add_argument("--input", dest="infile", action="store",
+        default="run.h5", help="Input HDF5 file with ensemble of events")
+    parser.add_argument("--output", dest="outfile", action="store",
+        default="sizesc.csv", help="CSV output with sizes")
+
+    args=parser.parse_args()
+    write_totals(args.infile, args.outfile)

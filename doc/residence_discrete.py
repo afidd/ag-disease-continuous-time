@@ -8,6 +8,7 @@ import logging
 import h5py
 import numpy as np
 import matplotlib.pyplot as plt
+from default_parser import DefaultArgumentParser
 
 logger=logging.getLogger(__file__)
 
@@ -132,6 +133,8 @@ class Tracking(object):
 
 
 def write_csv(name, observed, censored):
+    logger.debug("{0} observed".format(observed))
+    logger.debug("{0} censored".format(censored))
     with open("{0}.csv".format(name), "w") as csvfile:
         writer=csv.writer(csvfile, quoting=csv.QUOTE_MINIMAL)
         writer.writerow(["trial", "value", "censored"])
@@ -148,16 +151,20 @@ def write_csv(name, observed, censored):
 
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.DEBUG)
-    infile="naadsm.h5"
+    parser=DefaultArgumentParser(description="Finds residence time in states.")
+    parser.add_argument("--input", dest="infile", action="store",
+        default="naadsm.h5", help="Input HDF5 file with ensemble of events")
+
+    args=parser.parse_args()
+
     counts=BaseCounts()
-    foreach_dataset(infile, counts)
-    print(counts.farm_cnt)
-    print(counts.run_cnt)
-    print(counts.day_cnt)
+    foreach_dataset(args.infile, counts)
+    logger.info("Number of farms {0}.".format(counts.farm_cnt))
+    logger.info("Number of runs {0}.".format(counts.run_cnt))
+    logger.info("Largest number of days {0}.".format(counts.day_cnt))
 
     tracking=Tracking(counts.farm_cnt, counts.run_cnt, counts.day_cnt)
-    foreach_dataset(infile, tracking)
+    foreach_dataset(args.infile, tracking)
 
     write_csv("susceptible", tracking.infect, tracking.infectc)
     write_csv("latent", tracking.latent, tracking.latentc)
