@@ -311,10 +311,11 @@ BuildSystem(NAADSMScenario& scenario) {
             << " " <<
             start_state << " " << finish_state << " gamma " << 
             params.at("alpha") << " " << params.at("beta"));
+          // Their beta is a scale parameter. This gamma uses a rate.
           bg.AddTransition({trans_idx+1},
             {Edge{{within_idx, herd_place}, -1}},
             std::unique_ptr<SIRTransition>(new GammaTransition(
-              start, finish, params.at("alpha"), params.at("beta")))
+              start, finish, params.at("alpha"), 1/params.at("beta")))
             );
           break;
         case DistributionEnum::point:
