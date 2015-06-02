@@ -139,9 +139,43 @@ void AirborneSpreadExponential::load_target(std::string target, pt::ptree& tree)
   assert(tree.get<int>("delay.probability-density-function.point")==0);
 }
 
+AirborneSpreadLinear::AirborneSpreadLinear(std::string source) : source_(source) {}
+
+/*! Converts distance into a hazard rate.
+ *  Model for probability is linear P=-a*r+b
+ *  probability1km = exp(-r 1) so r=-ln(0.5)
+ *  Given probability for infection in a day, the hazard rate l is:
+ *  P=1 - exp(- l t) so l=-ln(1-P)
+ *  where t is 1 day.
+ */
+double AirborneSpreadLinear::spread_factor(const std::string& target) const {
+  return probability1km_.at(target);
+}
+
+double AirborneSpreadLinear::maximum_spread_distance(const std::string& target) const {
+  return maxspread_.at(target);
+}
+
+
+void AirborneSpreadLinear::load_target(std::string target, pt::ptree& tree) {
+  probability1km_[target]=tree.get<double>("prob-spread-1km");
+  assert(tree.get<int>("wind-direction-start.value")==0);
+  assert(tree.get<int>("wind-direction-end.value")==360);
+  maxspread_[target]=tree.get<double>("max-spread.value");
+  assert(tree.get<int>("delay.probability-density-function.point")==0);
+}
+
 
 std::ostream& operator<<(std::ostream& os, const AirborneSpreadExponential& dm) {
   os << "AirborneSpreadExponential("<<dm.source_<<")"<<std::endl;
+  for (const auto& entry : dm.probability1km_) {
+    os << entry.first << " " << entry.second << std::endl;
+  }
+  return os;
+}
+
+std::ostream& operator<<(std::ostream& os, const AirborneSpreadLinear& dm) {
+  os << "AirborneSpreadLinear("<<dm.source_<<")"<<std::endl;
   for (const auto& entry : dm.probability1km_) {
     os << entry.first << " " << entry.second << std::endl;
   }
@@ -352,7 +386,8 @@ void NAADSMScenario::load_scenario(const std::string& filename) {
       DiseaseModel flock_type;
       flock_type.load_disease_model(v.second);
       disease_model_[flock_type.production_type()]=flock_type;
-    } else if (v.first.compare("airborne-spread-exponential-model")==0) {
+    } 
+    else if (v.first.compare("airborne-spread-exponential-model")==0) {
       auto attr=v.second.get_child("<xmlattr>");
       auto from=attr.get<std::string>("from-production-type");
       auto whom=attr.get<std::string>("to-production-type");
@@ -360,6 +395,15 @@ void NAADSMScenario::load_scenario(const std::string& filename) {
         airborne_spread_exponential_.emplace(from, from);
       }
       airborne_spread_exponential_[from].load_target(whom, v.second);
+    }
+    else if (v.first.compare("airborne-spread-model")==0) {
+      auto attr=v.second.get_child("<xmlattr>");
+      auto from=attr.get<std::string>("from-production-type");
+      auto whom=attr.get<std::string>("to-production-type");
+      if (airborne_spread_linear_.find(from)==airborne_spread_linear_.end()) {
+        airborne_spread_linear_.emplace(from, from);
+      }
+      airborne_spread_linear_[from].load_target(whom, v.second);
     }
   }
   for (auto& dm : disease_model_) {
@@ -377,7 +421,7 @@ std::vector<std::array<double,2>> NAADSMScenario::GetLocations() const {
 }
 
 
-double NAADSMScenario::airborne_hazard(int64_t source_id,
+double NAADSMScenario::airborne_exponential_hazard(int64_t source_id,
     int64_t target_id) const {
   int64_t source=herds_.id_to_idx_.at(source_id);
   int64_t target=herds_.id_to_idx_.at(target_id);
@@ -397,14 +441,14 @@ double NAADSMScenario::airborne_hazard(int64_t source_id,
   double hazard;
   if (probability>=1) {
     hazard=1000;
-    BOOST_LOG_TRIVIAL(warning)<<"airborne_hazard probability over one "
-      << "source " << source_id << " target " << target_id;
+    BOOST_LOG_TRIVIAL(warning)<<"airborne_exponential_hazard p>1 "
+			      << "source " << source_id << " target " << target_id << " prob " << probability;
   } else if (probability>probability_cutoff) {
     hazard=-std::log(1-probability);
   } else {
     hazard=0;
   }
-  SMVLOG(BOOST_LOG_TRIVIAL(trace)<<"airborne_hazard "
+  SMVLOG(BOOST_LOG_TRIVIAL(trace)<<"airborne_exponential_hazard "
     << source_id << '\t' << target_id << '\t' << source_factor
     << '\t' << 1 << '\t' << std::pow(spread, distance)
     << '\t' << target_factor << '\t' << probability << '\t'
@@ -415,11 +459,63 @@ double NAADSMScenario::airborne_hazard(int64_t source_id,
   return hazard;
 }
 
+double NAADSMScenario::airborne_linear_hazard(int64_t source_id,
+    int64_t target_id) const {
+  int64_t source=herds_.id_to_idx_.at(source_id);
+  int64_t target=herds_.id_to_idx_.at(target_id);
+  const auto& source_prod=herds_.state_[source].production_type;
+  const std::pair<double,double>& source_loc=herds_.state_[source].latlong;
+  double source_factor=herds_.infection_factor_[source];
+  const auto& target_prod=herds_.state_[target].production_type;
+  const std::pair<double,double>& target_loc=herds_.state_[target].latlong;
+  double target_factor=herds_.infection_factor_[target];
+
+  double distance=::distancekm(source_loc.first, source_loc.second,
+    target_loc.first, target_loc.second);
+
+  const double probability_cutoff=1e-6;
+  double prob1km=airborne_spread_linear_.at(source_prod).spread_factor(target_prod);
+  double maxspread=airborne_spread_linear_.at(source_prod).maximum_spread_distance(target_prod);
+  double distance_factor=(maxspread-distance)/(maxspread-1);
+  if (distance_factor < 0.) distance_factor = 0.;
+  double probability=prob1km*distance_factor*source_factor*target_factor;
+  double hazard;
+  if (probability>=1) {
+    hazard=1000;
+    BOOST_LOG_TRIVIAL(warning)<<"airborne_linear_hazard p>1 "
+			      << "source " << source_id << " target " << target_id << " prob " << probability;
+  } else if (probability>probability_cutoff) {
+    hazard=-std::log(1-probability);
+  } else {
+    hazard=0;
+  }
+  SMVLOG(BOOST_LOG_TRIVIAL(trace)<<"airborne_linear_hazard "
+    << source_id << '\t' << target_id << '\t' << source_factor
+	 << '\t' << 1 << '\t' << prob1km << '\t' << distance_factor
+	 << '\t' << target_factor << '\t' << probability << '\t'
+    << source_loc.first << '\t' << source_loc.second << '\t'
+    << target_loc.first << '\t' << target_loc.second << '\t'
+    << distance);
+  assert(hazard>=0);
+  return hazard;
+}
+
+double NAADSMScenario::airborne_hazard(int64_t source_id,
+    int64_t target_id) const {
+  double total_hazard = 0.;
+  if (!airborne_spread_exponential_.empty()) total_hazard += airborne_exponential_hazard(source_id, target_id);
+  if (!airborne_spread_linear_.empty()) total_hazard += airborne_linear_hazard(source_id, target_id);
+  return total_hazard;
+    }
+
 std::ostream& operator<<(std::ostream& os, const NAADSMScenario& s) {
   for (const auto& dm : s.disease_model_) {
     os << dm.first << " " << dm.second;
   }
   for (const auto& as : s.airborne_spread_exponential_) {
+    os << as.first << " " << as.second;
+  }
+  for (const auto& as : s.airborne_spread_linear_) {
     os << as.first << " " << as.second;
   }
   os << s.herds_;

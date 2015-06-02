@@ -35,10 +35,7 @@ class DiseaseModel {
 };
 
 
-class AirborneSpread {
-};
-
-class AirborneSpreadExponential : public AirborneSpread {
+class AirborneSpreadExponential {
   std::string source_;
   std::map<std::string,double> probability1km_;
  public:
@@ -51,13 +48,15 @@ class AirborneSpreadExponential : public AirborneSpread {
   friend std::ostream& operator<<(std::ostream& os, const AirborneSpreadExponential& dm);
 };
 
-class AirborneSpreadLinear : public AirborneSpread {
+class AirborneSpreadLinear {
   std::string source_;
   std::map<std::string,double> probability1km_;
+  std::map<std::string,double> maxspread_;
  public:
   AirborneSpreadLinear()=default;
   AirborneSpreadLinear(std::string source);
   double spread_factor(const std::string& target) const;
+  double maximum_spread_distance(const std::string& target) const;
 
   void load_target(std::string target, boost::property_tree::ptree& tree);
  private:
@@ -97,13 +96,16 @@ class Herds {
 
 class NAADSMScenario {
   std::map<std::string,DiseaseModel> disease_model_;
-  std::map<std::string,AirborneSpread> airborne_spread_;
+  std::map<std::string,AirborneSpreadExponential> airborne_spread_exponential_;
+  std::map<std::string,AirborneSpreadLinear> airborne_spread_linear_;
   Herds herds_;
  public:
   void load(const std::string& scenario, const std::string& herd);
   int64_t herd_cnt() const;
   std::vector<std::array<double,2>> GetLocations() const;
   double airborne_hazard(int64_t source, int64_t target) const;
+  double airborne_exponential_hazard(int64_t source, int64_t target) const;
+  double airborne_linear_hazard(int64_t source, int64_t target) const;
   std::vector<int> herd_ids() const;
   const std::vector<int>& disease_states(int herd_id) const;
   const std::map<std::string,double>& disease_transition(
