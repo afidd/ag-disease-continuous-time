@@ -36,16 +36,32 @@ class DiseaseModel {
 
 
 class AirborneSpread {
+};
+
+class AirborneSpreadExponential : public AirborneSpread {
   std::string source_;
   std::map<std::string,double> probability1km_;
  public:
-  AirborneSpread()=default;
-  AirborneSpread(std::string source);
+  AirborneSpreadExponential()=default;
+  AirborneSpreadExponential(std::string source);
   double spread_factor(const std::string& target) const;
 
   void load_target(std::string target, boost::property_tree::ptree& tree);
  private:
-  friend std::ostream& operator<<(std::ostream& os, const AirborneSpread& dm);
+  friend std::ostream& operator<<(std::ostream& os, const AirborneSpreadExponential& dm);
+};
+
+class AirborneSpreadLinear : public AirborneSpread {
+  std::string source_;
+  std::map<std::string,double> probability1km_;
+ public:
+  AirborneSpreadLinear()=default;
+  AirborneSpreadLinear(std::string source);
+  double spread_factor(const std::string& target) const;
+
+  void load_target(std::string target, boost::property_tree::ptree& tree);
+ private:
+  friend std::ostream& operator<<(std::ostream& os, const AirborneSpreadLinear& dm);
 };
 
 
