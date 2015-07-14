@@ -76,8 +76,11 @@ There is a clock.
 Each possible transition has a probability mass function.
 The transitions compete to fire.
 
+Figure: Competition with probabilities of firing and four
+ways to resolve it.
+
 Four ways to handle competition among transitions to
-change the same part of state.
+change the same part of state. (Pull from other tex file.)
 
 Consequence: All data in is, or will be treated as, a p.m.f.
 of a hazard rate.
@@ -96,20 +99,52 @@ exists, and this is what it is. We'll use it later.
         to theoretical solutions.
   \item Turn parts of the simulation on and off in order to analyze them
         separately.
+  \item Turn on developer logging in order to observe what caused an event.
   \item Write a simulation with which to compare.
   \item Lots of plots and graphs. These help you find the unexpected.
 \end{enumerate}
 
 \subsection{Unit Disease Model}
+Figure: unit disease states and transitions as a graph.
 
+Figure: unit disease pmf for each transition, from single-unit simulation.
+        Include pmf that is input. Include continuous-time comparison.
+
+Figure: unit disease pmf for each transition, from larger simulation.
+        Include pmf that is input.
 
 \subsection{Airborne Disease Spread Model}
+Figure: hazard rates for curve given same start.
+
+Figure: hazard rates from same initial condition, run just to first step
+        repeatedly in order to measure hazard rate.
 
 
-\subsection{Direct Contact Spread Model}
+\subsection{Indirect Contact Spread Model}
+Figure: Plots of spread from a single source, the same step over and over.
+
+Figure: Cartoon of normalized trucks leaving versus normalized
+        trucks arriving.
+
+Figure: Force of infection for constant trucks leaving infected source
+        versus constant trucks arriving to destinations.
+
+Figure: Equivalence with simplified continuous-time models.
+
+
+\subsection{Some Intervention Model: Zones?}
 
 
 \section{Software Engineering}
+Model readiness levels don't correspond to how we work with
+simulations. They never survive contact with field data,
+so the code, at this model level, is plastic.
+
+People need GUIs, but statistics needs API and/or data formats.
+
+Equations are always a challenge. (Pull from other document.)
+
+Developer documentation and tracing are important.
 
 \section{Conclusion}
 \subsection{Going Forward}
