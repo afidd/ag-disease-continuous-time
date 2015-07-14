@@ -1,0 +1,119 @@
+\documentclass{article}
+
+\usepackage{times}
+\usepackage{mathptmx}
+\usepackage[margin=1in]{geometry}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{xspace}
+
+\title{Analysis of Behaviors of North American Animal Disease Simulation}
+\author{Andrew J.\ Dolgert}
+\date{5 July 2015}
+
+\newcommand{\naadsm}{\textsc{naadsm}\xspace}
+
+\begin{document}
+\maketitle
+
+\section{Introduction}
+The North American Animal Disease Simulation is an instrument to
+understand the spatial spread of disease among agricultural units.
+It is a primary tool of the United States Department of Agriculture
+for developing policies regarding outbreaks of Foot and Mouth Disease
+(\textsc{fmd}) and High Pathogenicity Avian Influenza (\textsc{hpai}).
+The code for this simulation has been written by experts, both
+veterinary and computational, and has been vetted numerous times.
+
+At least four different sources describe what \naadsm models.
+There are model specification documents with every detail but
+the input data. The user guide for the graphical interface
+elucidates choices about running the simulation. The code itself
+is free on the web, and there are peer-reviewed articles about it.
+
+We know the rules about small scale individual movements and behaviors that
+were put into the model. We know that output from the simulation
+looks like what experts expect at a larger scale.
+However, the kinds of behaviors that shape policy happen at
+an intermediate scale. This scale corresponds roughly to
+what \naadsm calls a model within the simulation, for instance
+the disease model, the direct contact model,
+and the zone intervention model. What properties of agricultural
+management and disease are most important for how disease spreads?
+These are the traits upon which to focus interventions.
+
+This document will offer ways to analyze \naadsm, as well
+as other complex simulations, by giving tools to understand
+intermediate-scale behaviors.
+
+Analyzing the behavior of a model is a way to verify
+functioning of a simulation according to its specification.
+
+
+\section{Why This Simulation Is Difficult}
+
+There is almost no data on how disease travels.
+Even every detail of an outbreak is only one realization.
+The particular strain of one outbreak differs from another,
+as do local laws and management practices and landscapes
+and hosts.
+
+Without large-scale data, this simulation works from first principles.
+Start with individual behavior and build up.
+It's a game of telephone, lossy at every step.
+
+Code encodes. It makes obscure original intentions.
+
+\section{NAADSM is a Discrete Time Simulation}
+
+Every simulation's ability to model the world depends
+upon an internally consistent mathematical definition
+of how state progresses with time.
+ODEs, PDEs, continuous time, discrete time.
+
+There is a clock.
+
+Each possible transition has a probability mass function.
+The transitions compete to fire.
+
+Four ways to handle competition among transitions to
+change the same part of state.
+
+Consequence: All data in is, or will be treated as, a p.m.f.
+of a hazard rate.
+
+Consequence: A discrete-time version of infection pressure
+exists, and this is what it is. We'll use it later.
+
+
+\section{Techniques}
+\begin{enumerate}
+  \item Observe it like a wild trajectory, just with many more samples.
+        This amounts to establishing observable states, then find every
+        possible transition among observable states, then measure
+        what you got. (This is a GSPN.)
+  \item Establish simplified conditions, possibly which correspond
+        to theoretical solutions.
+  \item Turn parts of the simulation on and off in order to analyze them
+        separately.
+  \item Write a simulation with which to compare.
+  \item Lots of plots and graphs. These help you find the unexpected.
+\end{enumerate}
+
+\subsection{Unit Disease Model}
+
+
+\subsection{Airborne Disease Spread Model}
+
+
+\subsection{Direct Contact Spread Model}
+
+
+\section{Software Engineering}
+
+\section{Conclusion}
+\subsection{Going Forward}
+Individual-based behaviors define a subspace within larger-scale
+behaviors. Find and parameterize this.
+
+\end{document}
