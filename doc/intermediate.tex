@@ -12,16 +12,18 @@
 \date{5 July 2015}
 
 \newcommand{\naadsm}{\textsc{naadsm}\xspace}
+\newcommand{\hpai}{\textsc{hpai}\xspace}
+\newcommand{\fmd}{\textsc{fmd}\xspace}
 
 \begin{document}
 \maketitle
 
 \section{Introduction}
-The North American Animal Disease Simulation is an instrument to
+The North American Animal Disease Simulation (\naadsm) is an instrument to
 understand the spatial spread of disease among agricultural units.
 It is a primary tool of the United States Department of Agriculture
 for developing policies regarding outbreaks of Foot and Mouth Disease
-(\textsc{fmd}) and High Pathogenicity Avian Influenza (\textsc{hpai}).
+(\fmd) and High Pathogenicity Avian Influenza (\hpai).
 The code for this simulation has been written by experts, both
 veterinary and computational, and has been vetted numerous times.
 
@@ -61,6 +63,11 @@ and hosts.
 Without large-scale data, this simulation works from first principles.
 Start with individual behavior and build up.
 It's a game of telephone, lossy at every step.
+
+The simulation serves inference, model selection,
+and estimation. The job of inference is particularly difficult
+because all of the data from an outbreak is a single trajectory,
+at best.
 
 Code encodes. It makes obscure original intentions.
 
@@ -113,7 +120,34 @@ Figure: unit disease pmf for each transition, from single-unit simulation.
 Figure: unit disease pmf for each transition, from larger simulation.
         Include pmf that is input.
 
+
 \subsection{Airborne Disease Spread Model}
+Airborne spread, for the exponential model, is expressed
+as the probability of infection, per day, at 1km.
+The general form is $p=e^{-rd}$, where $d$ is a distance, $r$ a constant,
+and $p$ the probability.
+Given a distance of $d_0=1\:\mbox{km}$, the probability, $p_0$, is
+$p_0 = e^{-r d_0},$
+so that $r=-\ln p_0$. This becomes, succinctly, $p=p_0^d$, for
+any given distance.
+
+Instead of a probability per day, a continuous-time simulation would
+pose a constant hazard rate. If we choose a hazard rate such that the
+total probability of infection per day is $p$, then
+\begin{equation}
+  p=1-e^{-\lambda \Delta t},
+\end{equation}
+where $\lambda$ is the hazard rate and $\Delta t=1$ is the day. Thus,
+$\lambda=-\ln(1-p)=-\ln(1-p_0^d)$.
+
+Another approach is to take the probability per day as a geometric
+distribution. Given that the distribution is enabled at time $t=0$,
+there is a probability $p$ that it fires at day $t=1$, and so on.
+The probability mass function is $(1-p)^k p$, where $k=t-1$ and $k$
+runs from 0 upward. The mean of $k$ is  then $(1-p)/p$ so that the
+mean of $t$ is $1/p$. The mean of an exponential distribution is
+$1/\lambda$, so the equivalent distribution is $\lambda=p=p_0^d$.
+
 Figure: hazard rates for curve given same start.
 
 Figure: hazard rates from same initial condition, run just to first step

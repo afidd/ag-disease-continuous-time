@@ -7,6 +7,7 @@ of 50 scatter points.
 Author: Nicolas P. Rougier
 """
 import logging
+import sys
 import numpy as np
 import h5py
 import matplotlib.pyplot as plt
@@ -27,23 +28,46 @@ def transitions(open_file):
     locations=open_file["/trajectory/locations"]
     trajectory_name=datasets(open_file)[0]
     dset=open_file["/trajectory/{0}".format(trajectory_name)]
-    events=list()
-    times=list()
-    events.append(0)
-    times.append(0.0)
-    for kind, whom, who, when in dset:
-        if kind==0:
-            events.append(whom)
-            times.append(when)
-    return (locations, np.array(events), np.array(times))
 
+    event=dset["Event"]
+    who=dset["Who"]
+    whom=dset["Whom"]
+    when=dset["When"]
+    ret=[np.array(locations)]
+    ret.extend([np.array(x) for x in [event, who, whom, when]])
+    return ret
+
+
+
+_degrees_to_radians=np.pi/180
+_radians_km=180*60*1.852/np.pi
+
+def distancekm(latlon1, latlon2):
+    """Distance computed on a spherical earth.
+    Taken from http://williams.best.vwh.net/avform.htm."""
+    ll1=latlon1*_degrees_to_radians
+    ll2=latlon2*_degrees_to_radians
+    return _radians_km*(2*np.arcsin(np.sqrt(np.power(np.sin((ll1[0]-ll2[0])/2),2)+
+        np.cos(ll1[0])*np.cos(ll2[0])*np.power(np.sin((ll1[1]-ll2[1])/2), 2))))
+
+
+def map_proj():
+    import pyproj
+    # This is a projection for South Carolina
+    sc_proj='+proj=lcc +lat_1=32.5 +lat_2=34.83333333333334 +lat_0=31.83333333333333 +lon_0=-81 +x_0=609600 +y_0=0 +datum=NAD83 +units=ft +no_defs '
+    projection=pyproj.Proj(sc_proj)
+    return projection
 
 logger=logging.getLogger(__file__)
 logging.basicConfig(level=logging.DEBUG)
 
-data_file="src/sirexp.h5"
+data_file="run.h5"
 f=h5py.File(data_file)
-locations, farm_order, farm_times=transitions(f)
+locations, event, who, whom, when=transitions(f)
+logger.debug("event {0}".format(event))
+logger.debug("who {0}".format(who))
+logger.debug("whom {0}".format(whom))
+logger.debug("when {0}".format(when))
 
 color_choice={'susceptible' : 'black', 'infected' : 'orangered'}
 color_code=dict()
@@ -59,8 +83,23 @@ ax.set_ylim(0,1), ax.set_yticks([])
 
 # Create rain data
 n_drops = locations.shape[0]
+projection=map_proj()
+projected=locations[:,:]
+for i in range(locations.shape[0]):
+    projected[i,:]=np.array(projection(locations[i,1], locations[i,0]))
+logger.debug("projected {0}".format(projected))
+
+max_x=np.max(projected[:,0])
+min_x=np.min(projected[:,0])
+max_y=np.max(projected[:,1])
+min_y=np.min(projected[:,1])
+locations_scaled=(projected-np.array([min_x, min_y]))*np.array(
+    [1.0/(max_x-min_x), 1.0/(max_y-min_y)])
+#logger.debug(locations_scaled)
+logger.debug("min farm {0} max farm {1}".format(np.min(whom), np.max(whom)))
 farm_cnt = n_drops
-end_time=farm_times[-1]*1.01
+last_infection=np.where(event==0)[0]
+end_time=when[last_infection[-1]]*1.05
 frame_cnt=1000
 frame_interval=10
 
@@ -69,8 +108,7 @@ frame_interval=10
 #np.random.shuffle(farm_order)
 #farm_times=np.random.uniform(0, end_time, farm_cnt)
 #farm_times.sort()
-current_farm=0
-
+event_idx=0
 
 farms = np.zeros(n_drops, dtype=[('position', float, 2),
                                       ('size',     float, 1),
@@ -80,7 +118,7 @@ marker_size=100
 
 # Initialize the raindrops in random positions and with
 # random growth rates.
-farms['position'] = locations #np.random.uniform(0, 1, (n_drops, 2))
+farms['position'] = locations_scaled #np.random.uniform(0, 1, (n_drops, 2))
 farms['size'].fill(marker_size)
 farms['color'][:]=color_code['susceptible']
 
@@ -105,6 +143,10 @@ rain_scat = ax.scatter(rain_drops['position'][:,0], rain_drops['position'][:,1],
                   s=rain_drops['size'], lw=0.5, facecolors='none',
                   edgecolors=rain_drops['color'])
 
+farm_idx=21-1
+farms['color'][farm_idx] = color_code['infected']
+rain_drops['size'][farm_idx]=marker_size
+rain_drops['color'][farm_idx, 3]=1.0
 
 def update(frame_number):
     # Get an index which we can use to re-spawn the oldest raindrop.
@@ -116,19 +158,39 @@ def update(frame_number):
 
     # Make all circles bigger.
     rain_drops['size'] += rain_growth_rate
+    (einfect, eclinical, erecover, ewane)=(0, 1, 2, 3)
 
-    global current_farm
-    global farm_order
-    global farm_times
-    global farm_cnt
-    while current_farm<len(farm_order) and \
-            farm_times[current_farm]<current_time:
-        farm_idx=farm_order[current_farm]
-        logger.debug("changing farm {0}".format(farm_idx))
-        farms['color'][farm_idx] = color_code['infected']
-        rain_drops['size'][farm_idx]=marker_size
-        rain_drops['color'][farm_idx, 3]=1.0
-        current_farm+=1
+    global event_idx
+    global locations_scaled
+    global ax
+    global event
+    global when
+    global who
+    global whom
+    while event_idx<len(event) and \
+            when[event_idx]<current_time:
+        farm_idx=whom[event_idx]-1
+        source_idx=who[event_idx]-1
+        now=when[event_idx]
+        what=event[event_idx]
+        if what==einfect:
+            logger.debug("changing farm {0}".format(farm_idx))
+            farms['color'][farm_idx] = color_code['infected']
+            rain_drops['size'][farm_idx]=marker_size
+            rain_drops['color'][farm_idx, 3]=1.0
+            x0, y0=locations_scaled[source_idx,:]
+            x1, y1=locations_scaled[farm_idx,:]
+            dx=x1-x0
+            dy=y1-y0
+            r=np.sqrt(dx*dx+dy*dy)
+            dr=0.04 # Want to reduce length by fixed distance
+            g=(r-dr)/r
+            if g<0:
+                g=0.1
+            logger.info("x0 {0} x1 {1}".format(x0, x1))
+            ax.arrow(x0, y0, g*dx, g*dy, head_width=0.01, head_length=0.02,
+                fc='k', ec='k')
+        event_idx+=1
 
 
     # Update the scatter collection, with the new colors, sizes and positions.

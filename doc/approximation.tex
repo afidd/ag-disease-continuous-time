@@ -34,7 +34,8 @@ A well-posed continuous-time model predicts a set of
 allowed trajectories, each with a likelihood from
 which to sample the next state of the system.
 
-\section{Conflict Resolution Method}
+\section{Ways to Define Discrete Stochastic Simulations}
+\subsection{Conflict Resolution Method}
 This is the simplest method, in use within \textsc{naadsm}.
 Call the time of the system $T_n=n\Delta t$. The state of
 the system at time $T_n$ is $X_n$.
@@ -58,8 +59,13 @@ A conflict is defined according to whether the
 final state of transitions disagrees. It's not a consideration
 of probability in generation of the next state.
 
+The conflict resolution can be incorporated into 
+a measure of the hazard rate of the conflicting transitions
+in order to estimate a hazard rate for the individual transitions.
 
-\section{Molloy Method}
+
+
+\subsection{Molloy Method}
 This technique begins with an assumption that
 the discrete time stochastic system is specified as a
 set of discrete time stochastic processes, each of which
@@ -80,7 +86,7 @@ $(!a,b)$ or $(a,!b)$, weighted by the relative probability
 of $a$ and $b$. This generalizes to many transitions.
 
 
-\section{Single Transition Method}
+\subsection{Single Transition Method}
 This section describes a way to create a discrete-time
 model from a continuous-time model with the approximation
 that there are no hidden intermediate states during the
@@ -103,7 +109,8 @@ This would compute the probability for transition to
 a final state $(a,b)$ excluding $a$ before $b$.
 
 
-\section{Enumeration of States}
+\section{How to Calculate Discrete Stochastic Sampling}
+\subsection{Enumeration of States}
 What transitions may exclude the firing of other
 transitions depends on the current state of the
 system. Consider a continuous-time discrete-state
