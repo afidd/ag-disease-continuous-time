@@ -1,0 +1,416 @@
+\documentclass{article}
+\usepackage{xspace}
+
+\title{Technical Document: Software Engineering Challenges for Stochastic Simulation}
+\author{Drew Dolgert, Chris Myers, Dave Schneider}
+\date{\today}
+\begin{document}
+\maketitle
+
+\newcommand{\naadsm}{\textsc{naadsm}\xspace}
+\newcommand{\adct}{\textsc{adct}\xspace}
+\newcommand{\CC}{C\nolinebreak\hspace{-.05em}\raisebox{.4ex}{\tiny\bf +}\nolinebreak\hspace{-.10em}\raisebox{.4ex}{\tiny\bf +}\xspace}
+
+\tableofcontents
+
+\section{Introduction}
+These are observations on software engineering of
+scientific software. They were gleaned while reviewing
+the North American Animal Disease Simulation Model (\naadsm) and while
+writing similar software, called Animal Disease in
+Continuous Time (\adct). Both use stochastic simulation
+to model the spread of disease from farm to farm,
+among agricultural units.
+
+Whether software runs correctly is a perennial problem\cite{hoare1996}.
+The functioning of \naadsm, in particular, determines behavior
+and expenditures for both agricultural operators and the \textsc{usda}.
+\naadsm simulates disease spread, disease spread rate determines
+risk, and risk determines governmental policy for intervention
+and mitigation of economic and animal harm.
+Given a scenario for introduction of disease, \naadsm produces
+many possible trajectories for spread across a landscape, so the
+results are uncertain, but this doesn't make precision in calculation
+less important. There is always a threshold of risk at which
+governmental policy assigns quarantine, depopulation or movement
+restrictions, so an erroneous shift in the uncertain predictions
+could result in farms or regions of farms either overly at risk
+or overly risk-managed. Both are costly.
+
+\naadsm is also uncommon in that it is both economically important
+and a public instrument of the government, so that it has already
+supported external validation, extensive testing, and the
+benefit of many eyes on the code. It has traits of excellent
+software.
+\begin{itemize}
+  \item The code is written to be read, as described
+      in \emph{Code Complete}\cite{mcconnell2004code}. Organization
+      of code and naming contribute to review of code.
+  \item Best-in-class libraries are used where possible. These
+    include the Gnu Scientific Libraries for distributions
+    and the Scalable Parallel Pseudo Random Number Generators
+    Library for random numbers.
+  \item Different processes for spread of disease are separated
+    into different ``models'' within the code. A responsible party,
+    both programmer and veterinarian, has signed each model.
+  \item The DejaGnu software performs unit tests at the model
+    level. These unit tests are simple to run and organized.
+  \item There is an open specification for each scientific
+    model. The specification and code read like a diptych,
+    one parallel to the other.
+  \item Calculation of disease processes is completely separate
+    from graphical display of either choices about a scenario
+    or results of a scenario. Each is written in a language
+    appropriate to the task, \CC and Delphi, respectively.
+  \item The use of version control, assertions, and clear
+    comments follow best practices\cite{hunt2000pragmatic}.
+\end{itemize}
+This is a code for which a governing body has allocated resources
+appropriate for the importance of the tool, and the resulting
+simulation has earned the trust of analysts who estimate risk.
+
+It may therefore be surprising that the following sections
+describe unintended behavior in a simulation model,
+failure to follow specifications, and even failure to
+correctly sample a random number. None of this is
+surprising to the authors who are responsible, themselves,
+for constructing simulation codes. In the absence of formal
+techniques from mathematics and computer science, any code
+of this size and complexity will have what programmers
+call ``defects.''
+
+This document asks, therefore, what are desirable traits
+of scientific software as important as \naadsm and what techniques
+guard against defects that might affect risk analysis and subsequent
+policy decisions? The document looks at \naadsm 3.2.19, which
+is an older, well-known version. The lessons below come from
+developers who have a lot of experience and may occasionally
+still be stupid. The core of the challenge is an effort
+to perform scientific analysis of a complicated simulation,
+where that analysis is \emph{beyond the user requirements for
+the application}.
+
+
+\section{Traits of High Value Scientific Simulation}
+Dynamical simulation of disease serves risk analysis in a few ways.
+Given spread of an outbreak by unknown processes, a statistical
+technique called \emph{model selection} can use \naadsm
+to infer parameters for different processes and then estimate
+the likelihood of possible processes according to \emph{model
+information criteria}. Given an outbreak of a known disease,
+the statistical technique of \emph{estimation} can use thousands
+of runs of \naadsm to estimate effectiveness of interventions.
+Both of these quantitative uses of \naadsm require that statistical
+algorithms choose parameters for \naadsm, run it many times, and
+manipulate the outcomes of those runs. \naadsm must be a cog
+in a larger machine, so its architecture must serve other software.
+
+A second uncommon requirement on the software engineering of
+\naadsm is that choices in the code and parameterization
+are in some way official. Those choices embed expert opinion
+which may affect policy about an industry.
+
+(Lastly, what if \naadsm were run in an emergency? How would
+that affect requirements on building it?)
+
+
+\subsection{Building the Simulation}
+\naadsm 3.2.19 is available as source code on a public web site.
+Building the application is, of necessity, complex. It is meant
+to run on both Windows and Linux. There are about a dozen
+supporting libraries to install. \naadsm, itself, requires about
+a hundred thousand lines of code just for the core simulation.
+
+The specific problems building \naadsm 3.2.19 are the following.
+\begin{itemize}
+  \item The library \texttt{gd} did not have a makefile or
+        any standard installation instructions.
+  \item The \texttt{configure} script included options to specify
+        installation locations of some, but not all, supporting
+        libraries. For those libraries, they just had to be moved
+        somewhere the \texttt{configure} script would already look.
+        The \texttt{rtree} library is an example of this.
+  \item Two source files were required to compile but not included
+        in the \texttt{configure} script. These were 
+        \texttt{herd-randomizer.c} and \texttt{herd-randomizer.h}.
+  \item The \texttt{configure} script uses a version of autotools
+        which is more than a few years old. The script needed to
+        be updated to work with available versions.
+        Among the updates were quoting of arguments to macros
+        and setting an \texttt{ACLOCAL\_PATH} variable to
+        permit the \texttt{aclocal} autotool to find macros.
+\end{itemize}
+One consequence is that building \naadsm
+on Linux required more than a day of effort. Worse is that
+the absence of \texttt{herd-randomizer.c} suggests the final build
+of version 3.2.19 presented on the web may differ from the
+configuration file used to build the delivered code. Version 3.2.19
+was extensively validated, but which files were in the version
+that was validated?
+
+The two ways to address these problems are to automate a build
+of the code and to provide a prebuilt build environment.
+
+Automation of builds is associated with continuous integration.
+The practice of continuous integration requires that, after every
+check-in to the versioning repository, the development team
+halts production to address errors. This practice may not help
+most teams and doesn't address the problems cited above. More
+interesting is the technology used to perform continuous
+integration. A task server, such as Hudson or Jenkins,
+can, in concert with other tools, create a virtual machine,
+fetch source code and supporting libraries, compile all of it,
+and test the result, all at the press of a button. This capability
+offers reassurance that code will compile on multiple operating
+systems with multiple versions of libraries and would surely
+avert the problems seen above.
+
+\naadsm is distributed as a prebuilt application for Windows
+and as source code. A possible further step of reliability would
+be to distribute either a virtual machine (such as VirtualBox)
+or a containers virtualization (such as OpenVZ) which runs
+\textsc{naadsm/pc} and \textsc{naadsm/sc}.
+This would address a few possible challenges. Windows programs
+sometimes stop working after a few years thanks to changes to
+the operating system or compatibility with supporting libraries.
+Distributing an application with operating system, as
+a virtual machine, increases
+longevity of an application as a scientific reference.
+In the case that deployment of simulations to a supercomputer
+is required, containers virtualization would be very handy
+and efficient way to run a reference copy of the application
+with little overhead.
+
+
+\subsection{Developer Documentation}
+\naadsm has excellent documentation for its \textsc{pc} version,
+the one with the \textsc{gui}, but there is little documentation
+for users of the \textsc{sc} version or for authors of code.
+This matters for three cases.
+
+\subsection{Testing the Simulation Model}
+The application's primary output is a trajectory for the
+scenario. It's a list of states over time. The specification
+for the simulation is sufficiently complex that researchers
+spend time asking both why it exhibits certain behaviors
+and how it made those choices. Examination of the internal
+state of the application during a time step helps answer those
+questions. Other scientists, and possibly analysts, will want
+to know more than the basic set of states.
+
+\naadsm delivers lots of information for every run and every time
+step in four different ways. It's an unusually thorough effort
+and yet difficult to use.
+
+As an example, which infected unit infected the given
+susceptible unit during the last time step? Did the
+infection occur by airborne spread or direct contact?
+
+
+\subsubsection{Scenario Monitor Output}
+Every \naadsm scenario creates what are called models within
+the application, and some of those models are of a sort
+called \emph{monitors}. Each monitor is responsible
+for reporting some portion of the state of the program.
+A binary file encodes the scenario for the \textsc{gui}
+version of \naadsm, and a \textsc{utf--16} \textsc{xml}
+file encodes the scenario for the \textsc{sc} version
+of \naadsm. Entries in these files specify monitors
+for a scenario.
+
+While those entries create the monitor object within
+the running simulation, they do not appear to turn on
+output to file or screen by that monitor. This requires,
+within the \textsc{gui}, checking a separate box.
+It's unclear to the authors how to enable printout for
+the \textsc{sc} version.
+
+Output from the monitors isn't documented, either,
+and appears to be in a format intended neither for visual
+inspection nor for computer parsing. It isn't \textsc{csv},
+\textsc{xml}, or \textsc{json}.
+
+
+\subsubsection{NAADSM/GUI Data Output}
+The \naadsm Windows application offers many charts, graphs,
+and tables.
+If the goal is quantitative analysis of sets of runs,
+then we will want to look at tables of data from runs in Excel,
+R, or something similar.
+The \textsc{gui} will save separate histograms of susceptible,
+infected, or recovered, averaged over several runs.
+There is a technical, statistical problem with this output
+for upstream analysis because statistical estimation
+taken from runs averages over the properties of each run,
+on a run-by-run basis. In other words, all the traits of
+a single run need to be grouped together in order to
+perform estimation.
+The \textsc{gui} does also write files with data for
+each run. These files come from the monitors and, once
+interpreted, would likely show the requisite per-run information,
+but this is the route an analyst would use for quantitative
+analysis.
+
+
+\subsubsection{NAADSM/SC Tracing}
+Tracing is a technique to report values as they are
+computed in the code. Tracing libraries often write to
+the screen on the standard error channel or write to
+files, but they may also write to system services or
+network monitors. Tracing is the most basic form of
+debugging code.
+
+We had a question about what values were used to weight
+the exponential airborne model, to account for 
+size of units.
+\naadsm has a tracing facility, called with the
+\texttt{g\_log} command. The tracing facility would
+have been an excellent way to find this information,
+but it wasn't clear how to enable it.
+
+There are standard logging facilities for most languages,
+almost all mirroring the capabilities of Java's log4j.
+They offer great features, foremost of which is having
+separate documentation on how to enable and use them.
+
+
+\subsubsection{NAADSM/GUI Database Queries}
+The Windows application version of \naadsm stores data
+from runs in a database suitable for Microsoft Access.
+It's a great idea, an appropriate tool for the task.
+The user interface offers a generalized \textsc{sql}
+query entry to probe the data. This would be an excellent
+opportunity for some documentation about the table
+structure. Documenting that structure would pose a
+serious challenge because the table structure would probably
+change going to the next version of the application.
+It might also be easy to mistake the meaning of data
+within the tables in order to draw erroneous conclusions
+about simulation results. Even so, the database format
+is sensible and a tantalizing resource. It would be
+great to have available within the \textsc{sc} version
+of the code.
+
+
+\section{Specific Recommendations to Reduce Defects}
+\subsection{Developer Documentation}
+
+Developer documentation is a guideline for contributors
+to the code. It covers high-level structure, best practices,
+and formatting guidelines. All of these are associated with
+improved code quality. This documentation doesn't have to be
+as polished. It may include images of whiteboards or recorded
+talks.
+
+Within \naadsm, developer documentation might cover practices
+for sampling distributions, as discussed below. It might cover
+the determinism of how a model interacts with other models
+when two models predict conflicting state changes. Both of these
+are important for correctness.
+
+
+\subsection{Testing Stochastic Simulations}
+
+\naadsm has lots of tests, all automated with DejaGnu, which is
+built upon the \texttt{expect} library. These work fine for
+deterministic tests but may not work as well for stochastic
+testing.
+
+There are several kinds of tests for computer software. The
+DejaGnu tests for \naadsm are at the level of unit tests,
+which means they ask whether the user interface of the program
+responds correctly to queries. In this case, they are
+queries of simple scenarios which stress individual models
+within the simulation.
+
+There can be lower-level verification tests, as well.
+Modern practice eschews these tests for general software because
+the tests, themselves, restrict the programmer's ability to refactor
+software. However, scientific software often follows a clear
+mathematical structure which permits testing clear atomic units,
+such as statistical distributions and, in this case, the core
+functionality of sampling a discrete time step.
+
+
+Unit tests are classically at the user interface level.
+Verification tests can be lower-level, specifically for statistical
+distributions.
+
+
+\subsection{Equations}
+It is oddly, persistently, difficult to ensure that
+a mathematical assignment within the code corresponds to
+that intended. Let's look at how we try to make this happen.
+
+\begin{itemize}
+  \item Put the equation into the user guide. The example here
+        is \naadsm's airborne exponential spread model. There is
+        a ``size factor'' which is taken from a normalized histogram.
+        It is described quickly in the docs without explanation or citation.
+
+  \item Citation of equations can help explain what they mean with
+        more context. The size factor is a CDF of a histogram, then
+        multiplied by 2. Maybe there is another way to get at this particular
+        value, but it's hard to tell.
+
+  \item We could write the summation in MathML and turn it into an
+        assignment in code at compile time. Similarly, we could have
+        Mathematica or Python sympy write C code for us. The actual
+        summation uses libraries in the code, so this doesn't work
+        well unless we choose a very mathematical language
+        (\textsc{j}, \textsc{apl}, Chapel), which is
+        impractical given how rarely people know these languages.
+
+  \item Document equations in comments within the code. Make small
+        routines with Latex equations in them so that equations can
+        be checked clearly. Doxygen is a tool that pulls comments
+        and reformats code within comments.
+
+  \item Part of unit tests can be to exercise smaller code segments.
+        There are different kinds of testing. Unit testing is generally
+        done at a feature level. Tests on individual equations are
+        lower-level tests. Having these write graphs can be helpful.
+        In this case, the summation done for the ``size factor'' uses
+        bins shifted to the left, resulting in values that are
+        averaged with the neighboring bin.
+
+  \item Naming of equations is important, too. The gamma function
+        in \naadsm has an $\alpha$ and $\beta$ parameter. $\beta$
+        usually denotes a rate, but here it denotes a scale factor.
+        That's in the documentation, but having the wrong name can
+        mean input is mistaken in the XML file.
+\end{itemize}
+
+
+\subsection{Model Separation}
+Separate objects in this code.
+How to separate definitions. For instance, can you add a new
+state? Kind of like asking how hard to add a database column.
+
+\subsection{Message Based}
+A general message queue, where any message can be taken by any reader.
+How is the determinism? How do you know who pulls things off the queue?
+Maybe not great for scientific software?
+
+\subsection{Input Data}
+
+\subsubsection{Sampling}
+Continuous to discrete needs a methodology.
+
+\subsubsection{Units of Measure}
+
+\subsubsection{Did you read what I wrote?}
+Did the program read the input file correctly?
+
+\subsubsection{UTF--8}
+
+
+
+\section{Conclusion}
+Credo. Simulation starts with a mathematical model.
+
+
+\bibliographystyle{plain}
+\bibliography{softeng}
+\end{document}
+
