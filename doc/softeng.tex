@@ -1,5 +1,9 @@
 \documentclass{article}
-\usepackage{xspace}
+\usepackage{times}
+\usepackage{mathptmx}
+\usepackage[margin=1in]{geometry}
+\usepackage{graphicx}
+\usepackage{hyperref}\usepackage{xspace}
 
 \title{Technical Document: Software Engineering Challenges for Stochastic Simulation}
 \author{Drew Dolgert, Chris Myers, Dave Schneider}
@@ -9,18 +13,44 @@
 
 \newcommand{\naadsm}{\textsc{naadsm}\xspace}
 \newcommand{\adct}{\textsc{adct}\xspace}
+\newcommand{\hpai}{\textsc{hpai}\xspace}
+\newcommand{\fmd}{\textsc{fmd}\xspace}
+\newcommand{\gui}{\textsc{gui}\xspace}
+\newcommand{\nsc}{\textsc{sc}\xspace}
 \newcommand{\CC}{C\nolinebreak\hspace{-.05em}\raisebox{.4ex}{\tiny\bf +}\nolinebreak\hspace{-.10em}\raisebox{.4ex}{\tiny\bf +}\xspace}
 
 \tableofcontents
 
 \section{Introduction}
-These are observations on software engineering of
-scientific software. They were gleaned while reviewing
-the North American Animal Disease Simulation Model (\naadsm) and while
-writing similar software, called Animal Disease in
-Continuous Time (\adct). Both use stochastic simulation
-to model the spread of disease from farm to farm,
-among agricultural units.
+The North American Animal Disease Simulation Model (\naadsm)
+simulates spread of disease among agricultural units on a
+landscape and interventions to the spread of disease\cite{naadsm}.
+Analysts at the regulatory agency \textsc{usda--aphis} use
+these simulations to understand how policies affect
+risk of disease spread. The \naadsm software is apt for this
+task in that it has a graphical user interface for modifying
+scenario parameters and analyzing summary results of dozens of
+runs of the simulation.
+
+This document asks, instead, how \naadsm in particular,
+or any similar simulation, might be modified for more
+quantitative use. 
+The model simulated by \naadsm, separate from its user
+interface, is a dynamical simulation of disease which
+could serve statistical risk analysis.
+Given spread of an outbreak by unknown processes, a statistical
+technique called \emph{model selection} can use \naadsm
+to infer parameters for different processes and then estimate
+the likelihood of possible processes according to \emph{model
+information criteria}. Given an outbreak of a known disease,
+the statistical technique of \emph{estimation} can use thousands
+of runs of \naadsm to estimate effectiveness of interventions.
+Both of these quantitative uses of \naadsm require that statistical
+algorithms choose parameters for \naadsm, run it many times, and
+manipulate the outcomes of those runs. \naadsm must be a cog
+in a larger machine, so its architecture must serve other software.
+
+
 
 Whether software runs correctly is a perennial problem\cite{hoare1996}.
 The functioning of \naadsm, in particular, determines behavior
@@ -87,31 +117,17 @@ is an older, well-known version. The lessons below come from
 developers who have a lot of experience and may occasionally
 still be stupid. The core of the challenge is an effort
 to perform scientific analysis of a complicated simulation,
-where that analysis is \emph{beyond the user requirements for
-the application}.
+where that analysis is beyond the user requirements for
+the application.
 
 
-\section{Traits of High Value Scientific Simulation}
-Dynamical simulation of disease serves risk analysis in a few ways.
-Given spread of an outbreak by unknown processes, a statistical
-technique called \emph{model selection} can use \naadsm
-to infer parameters for different processes and then estimate
-the likelihood of possible processes according to \emph{model
-information criteria}. Given an outbreak of a known disease,
-the statistical technique of \emph{estimation} can use thousands
-of runs of \naadsm to estimate effectiveness of interventions.
-Both of these quantitative uses of \naadsm require that statistical
-algorithms choose parameters for \naadsm, run it many times, and
-manipulate the outcomes of those runs. \naadsm must be a cog
-in a larger machine, so its architecture must serve other software.
-
-A second uncommon requirement on the software engineering of
-\naadsm is that choices in the code and parameterization
-are in some way official. Those choices embed expert opinion
-which may affect policy about an industry.
-
-(Lastly, what if \naadsm were run in an emergency? How would
-that affect requirements on building it?)
+\section{The Scientific Interface}
+This section looks at the steps required to treat the
+underlying model of \naadsm as a piece of a larger
+statistical calculation. The points made in this section
+are prosaic, but the goal is for the hard work of
+creating and validating these models to be available
+for novel analysis from tools like \textsc{r} or \textsc{sas}.
 
 
 \subsection{Building the Simulation}
@@ -292,6 +308,22 @@ great to have available within the \textsc{sc} version
 of the code.
 
 
+\subsection{Input Files}
+Scenario files and herd files for \naadsm come in
+two formats, one for the \gui and one for the \nsc version.
+The \nsc files are in \textsc{utf--16} instead of \textsc{utf--8}.
+Their \textsc{xml} format includes a document type definition
+(\textsc{dtd}), but the namespace in the scenario files
+isn't actually at the specified \textsc{url} and the 
+\textsc{unit} element isn't in any referenced namespace.
+As a result of these minor vagaries, the input files
+can't be read by standard parsers without editing.
+None of this is a big deal, except that modification
+of the \textsc{xml} directly is an excellent way to
+create code which interacts with \naadsm as a dynamical
+model beneath statistical software.
+
+
 \section{Specific Recommendations to Reduce Defects}
 \subsection{Developer Documentation}
 
@@ -311,106 +343,203 @@ are important for correctness.
 
 \subsection{Testing Stochastic Simulations}
 
-\naadsm has lots of tests, all automated with DejaGnu, which is
-built upon the \texttt{expect} library. These work fine for
-deterministic tests but may not work as well for stochastic
-testing.
+\naadsm uses extensive unit testing. Unit tests mimic
+a user interacting with a user interface in order to
+answer whether a deliverable feature of an application
+works according to expectations. It is one of the types
+of tests for software.
 
-There are several kinds of tests for computer software. The
-DejaGnu tests for \naadsm are at the level of unit tests,
-which means they ask whether the user interface of the program
-responds correctly to queries. In this case, they are
-queries of simple scenarios which stress individual models
-within the simulation.
+Because the mathematical model underlying \naadsm's
+calculations is stochastic, how the simulation responds
+will depend both on the input scenario and initialization
+of its random number generation. The current testing scheme
+relies on the Gnu DejaGnu testing framework, set up to
+expect a known set of responses. It fixes all random number
+generators to respond with the same value for every query.
+This is a way to test some basic behaviors of the interface
+but doesn't test any behavior that is stochastic.
 
-There can be lower-level verification tests, as well.
-Modern practice eschews these tests for general software because
+Performing a stochastic test on a simple scenario shows
+that the rate of change of infection predicted by the
+simulation doesn't match the input parameters from field
+observation. The scenario is a single unit with a latent
+infection of \hpai. The unit progresses to a clinically-infectious
+state and then a recovered state. When the scenario is
+run thousands of times, the distribution of
+times for these states should match the input
+parameters from the \hpai scenario.
+
+The input parameters for disease states in the \hpai
+scenario are shown in Table~\ref{table:hpaiparams}.
+The average time in each state doesn't match
+the average time of the inputs, so something is off.
+
+
+We can see from lower-level verification tests how
+sampling for transition times behaves.
+Modern practice eschews these lower-level
+tests for general software because
 the tests, themselves, restrict the programmer's ability to refactor
 software. However, scientific software often follows a clear
 mathematical structure which permits testing clear atomic units,
 such as statistical distributions and, in this case, the core
 functionality of sampling a discrete time step.
 
-
-Unit tests are classically at the user interface level.
-Verification tests can be lower-level, specifically for statistical
-distributions.
+We see that the sampling is biased by the change in domain
+size. The fix is a multiplication by two.
 
 
 \subsection{Equations}
+There were three instances, during our work, where
+transferring equations from specifications to code
+created difficulty either for correctness or for understanding
+what the code means.
+
+One of the input distributions of the \hpai scenario is
+a gamma distribution with two parameters. Those parameters
+are labeled ``alpha'' and ``beta.'' The gamma distribution
+can be specified two different ways, either with a
+shape and a scale or a shape and a rate. The ``alpha'' and
+``beta'' names usually refer to a shape and a rate but here
+refer to a shape and a scale. The authors' sense of ``usually''
+comes from a few statistical textbooks and Wikipedia.
+\naadsm includes a manual, not the specification but a user
+guide, that is clear which distribution they intend, so they
+did the right thing, but it's still very simple to mistake
+input parameters.
+
+The \naadsm specification for indirect contact (movement of
+vehicles among units) uses a probability distribution to
+determine at what radius to find the truck's destination.
+Choosing a uniform distribution for truck movement appears
+to be a MaxEnt choice. It appears to state that trucks
+will travel within some cutoff radius without bias to
+distance. However, the code doesn't normalize the radius
+by $1/r$, meaning a uniform distribution strongly favors
+trucks which travel short distances. The specification is
+again correct but easily misinterpreted.
+
+Lastly, there the airborne spread model models infection
+of neighboring units by wind or other causes. It
+makes sense that small units might be less infectious
+to their neighbors than large units. A ``size factor''
+accounts for this. The size factor, as stated by
+an equation in the specifications, doesn't match
+the internal calculation of the size factor.
+In this case, the summation done for the ``size factor'' uses
+bins shifted to the left, resulting in values that are
+averaged with the neighboring bin.
+
+% Size factor more troubling b/c it's included so that results
+% look right but has no justification. It's inherently qualitative.
+% Should be subject to model selection.
+
 It is oddly, persistently, difficult to ensure that
 a mathematical assignment within the code corresponds to
-that intended. Let's look at how we try to make this happen.
+that intended. There are many ways this can go wrong, and we
+have examples at each step.
+\begin{enumerate}
+    \item An equation in the specification can become separated
+          from what behavior that equation was supposed to express.
+          (Where is the size factor from?)
+    \item A clearly-stated equation can have more than one
+          mathematical interpretation. (Which gamma distribution do you mean?)
+    \item The code can have a defect in implementation of an equation,
+          which can be as subtle as having an arcsin with a different
+          domain.
+          (The size factor code is more complicated than the specification.)
+    \item A correctly coded equation can be incorporated mistakenly
+          in a model. (The gamma distribution, even though correct, is sampled incorrectly.)
+\end{enumerate}
+Whether an encoding reflects an author's intent is as querulous
+in computational simulation as it is in translation of poetry.
+There are some kinds of formal verification that can work
+for mathematical programming, but we mostly rely on two
+techniques, documentation and testing.
 
-\begin{itemize}
-  \item Put the equation into the user guide. The example here
-        is \naadsm's airborne exponential spread model. There is
-        a ``size factor'' which is taken from a normalized histogram.
-        It is described quickly in the docs without explanation or citation.
+Forget for the moment connotations of documentation and think
+instead about narrative, about telling a story that explains
+what causes the next step. For instance, it's likely that the
+$1/r$ normalization of the airborne model is intentional, but
+we don't understand the reasoning. Strength of this narrative
+depends on whether the explanation can precede what it explains
+for the reader and whether each step can be understood with
+the information provided thus far.
+There's no good answer for how to do this, so let's look at
+some methods.
 
-  \item Citation of equations can help explain what they mean with
-        more context. The size factor is a CDF of a histogram, then
-        multiplied by 2. Maybe there is another way to get at this particular
-        value, but it's hard to tell.
+\emph{Literate programming\/} is a technique where one writes
+a document in which are embedded snippets of code. The document
+would, in this case, explain the structure of the simulation
+and reasoning for each model, pairing implementation in code
+right after the need for that code is explained.
+Compiling the code then extracts the snippets from the document,
+weaves them together, and compiles as usual.
+For a small, mathematical problem, writing the code and mathematics
+together, start to finish, in this way, creates a powerful
+argument. Refactoring code becomes more difficult, as
+does any kind of boilerplate. The R programming language
+has literate programming tools builtin.
 
-  \item We could write the summation in MathML and turn it into an
-        assignment in code at compile time. Similarly, we could have
-        Mathematica or Python sympy write C code for us. The actual
-        summation uses libraries in the code, so this doesn't work
-        well unless we choose a very mathematical language
-        (\textsc{j}, \textsc{apl}, Chapel), which is
-        impractical given how rarely people know these languages.
+The same idea, in reverse, is to write a specification
+document which draws quotations of code from the repository.
+Doxygen and Python's Sphinx tools work this way. The editor sucks a few
+lines into a code box while compiling a \textsc{pdf}.
 
-  \item Document equations in comments within the code. Make small
-        routines with Latex equations in them so that equations can
-        be checked clearly. Doxygen is a tool that pulls comments
-        and reformats code within comments.
+Equations in code are often derived from other equations.
+Symbolic mathematics tools can write code for you.
+Mathematica, Python's sympy, Matlab, and more
+all generate code. There is always a possibility these
+tools might be in error, but they are much more likely
+to get the overall structure of a large polynomial correct.
 
-  \item Part of unit tests can be to exercise smaller code segments.
-        There are different kinds of testing. Unit testing is generally
-        done at a feature level. Tests on individual equations are
-        lower-level tests. Having these write graphs can be helpful.
-        In this case, the summation done for the ``size factor'' uses
-        bins shifted to the left, resulting in values that are
-        averaged with the neighboring bin.
+The Systems Biology Markup Language\cite{hucka2003systems}
+encodes equations using MathML, which specifies transcendental
+equations, such as the gamma distribution, using 
+OpenMath Content Directories. This makes equation specification
+in \textsc{xml} both more general and less subject to
+variation in what a definition might mean.
+Translation among MathML, LaTeX, and various computer languages
+has improved greatly in the past few years.
 
-  \item Naming of equations is important, too. The gamma function
-        in \naadsm has an $\alpha$ and $\beta$ parameter. $\beta$
-        usually denotes a rate, but here it denotes a scale factor.
-        That's in the documentation, but having the wrong name can
-        mean input is mistaken in the XML file.
-\end{itemize}
-
-
-\subsection{Model Separation}
-Separate objects in this code.
-How to separate definitions. For instance, can you add a new
-state? Kind of like asking how hard to add a database column.
-
-\subsection{Message Based}
-A general message queue, where any message can be taken by any reader.
-How is the determinism? How do you know who pulls things off the queue?
-Maybe not great for scientific software?
-
-\subsection{Input Data}
-
-\subsubsection{Sampling}
-Continuous to discrete needs a methodology.
-
-\subsubsection{Units of Measure}
-
-\subsubsection{Did you read what I wrote?}
-Did the program read the input file correctly?
-
-\subsubsection{UTF--8}
+Testing of code, as described in a section above, is quantitative.
+Qualitative results can also be meaningful. We could run
+the simulation, measure the rate of transitions from one
+state to another, and graph it. That graph should match the
+graphs provided in the article defining the distributions.
 
 
+\subsection{Qualitative Calculation}
+Let's walk through two examples in \naadsm and then
+discuss how they are qualitative.
+
+The ``size factor'' in the airborne kernel is complicated.
+It gives proportional results. There is no association
+with a biological behavior.
+
+Indirect contact interacts differently with quarantine
+than it does with zones. Kernels matter when
+they are quantitative, else why do this?\cite{buhnerkempe2013national}
+
+
+\subsection{Model Definition}
+The most powerful improvement for correctness would be
+a clear definition of the mathematical model upon which
+the \naadsm simulation is based.
+
+Landscape, biological processes, initial conditions,
+provenance, runtime behavior, are all different
+and shouldn't be mixed in the files.
 
 \section{Conclusion}
 Credo. Simulation starts with a mathematical model.
 
 
+(Lastly, what if \naadsm were run in an emergency? How would
+that affect requirements on building it?)
+
 \bibliographystyle{plain}
 \bibliography{softeng}
 \end{document}
+
 
